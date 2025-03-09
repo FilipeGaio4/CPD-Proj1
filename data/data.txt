@@ -1,0 +1,20 @@
+Dimensions: 1000
+Block Size: 100
+L1 DCM:152902913
+L2 DCM:64357791
+L2 DCA:0
+Dimensions: 1000
+Block Size: 20
+L1 DCM:14190468
+L2 DCM:25001692
+L2 DCA:0
+Dimensions: 1000
+Block Size: 20
+L1 DCM:0
+L2 DCM:0
+L2 DCA:0
+Dimensions: 1000
+Block Size: 20
+L1 DCM:14478002
+L2 DCM:25068605
+L2 DCA:0
