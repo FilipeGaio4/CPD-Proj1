@@ -15,7 +15,7 @@ void OnMult(int m_ar, int m_br)
 {
 	
 	SYSTEMTIME Time1, Time2;
-	
+	double ompTime1, ompTime2;
 	char st[100];
 	double temp;
 	int i, j, k;
@@ -41,7 +41,10 @@ void OnMult(int m_ar, int m_br)
 
 
     Time1 = clock();
+	ompTime1 = omp_get_wtime();
 
+	// #pragma omp parallel for collapse(2)
+	#pragma omp parallel for
 	for(i=0; i<m_ar; i++)
 	{	for( j=0; j<m_br; j++)
 		{	temp = 0;
@@ -55,7 +58,10 @@ void OnMult(int m_ar, int m_br)
 
 
     Time2 = clock();
+	ompTime2 = omp_get_wtime();
 	sprintf(st, "Time: %3.3f seconds\n", (double)(Time2 - Time1) / CLOCKS_PER_SEC);
+	cout << st;
+	sprintf(st, "Real Time: %3.3f seconds\n", (double)(ompTime2 - ompTime1));
 	cout << st;
 
 	// display 10 elements of the result matrix tto verify correctness
@@ -76,6 +82,7 @@ void OnMult(int m_ar, int m_br)
 void OnMultLine(int m_ar, int m_br)
 {
     SYSTEMTIME Time1, Time2;
+	double ompTime1, ompTime2;
     char st[100];
     int i, j, k;
     double *pha, *phb, *phc;
@@ -93,15 +100,21 @@ void OnMultLine(int m_ar, int m_br)
             phb[i*m_br + j] = (double)(i+1);
 
     Time1 = clock();
+	ompTime1 = omp_get_wtime();
 
+	// #pragma omp parallel for    // Este é pior
+	#pragma omp parallel for collapse(2)
     for(i=0; i<m_ar; i++)
         for(k=0; k<m_ar; k++)
             for(j=0; j<m_br; j++)
                 phc[i*m_ar+j] += pha[i*m_ar+k] * phb[k*m_br+j];
 
     Time2 = clock();
+	ompTime2 = omp_get_wtime();
     sprintf(st, "Time: %3.3f seconds\n", (double)(Time2 - Time1) / CLOCKS_PER_SEC);
     cout << st;
+	sprintf(st, "Real Time: %3.3f seconds\n", (double)(ompTime2 - ompTime1));
+	cout << st;
 
 	cout << "Result matrix: " << endl;
 	for(i=0; i<1; i++)
@@ -158,7 +171,7 @@ void OnMultBlock(int m_ar, int m_br, int bkSize)
 	ompTime2 = omp_get_wtime();
     sprintf(st, "Time: %3.3f seconds\n", (double)(Time2 - Time1) / CLOCKS_PER_SEC);
 	cout << st;
-    sprintf(st, "Real Time: %3.3f seconds\n", (double)(ompTime2 - ompTime1) / CLOCKS_PER_SEC);
+    sprintf(st, "Real Time: %3.3f seconds\n", (double)(ompTime2 - ompTime1));
     cout << st;
 
 	cout << "Result matrix: " << endl;
@@ -200,7 +213,6 @@ int main (int argc, char *argv[])
 {
 	printf("Compile with the flag -fopenmp\ng++ -Wall -o omp omp.cpp -O2 -lpapi -fopenmp\n");
 
-	char c;
 	int lin, col, blockSize;
 	int op;
 	
