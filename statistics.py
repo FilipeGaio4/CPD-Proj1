@@ -12,8 +12,9 @@ def compile_cpp(source_file):
         elif(source_file=="file"):
             os.system(f"g++ -Wall -o file file.cpp -O2 -lpapi")
             return "file"
-        else:
-            print("Wrong file to use")
+        elif source_file == "file_rust":
+            os.system("cd Rust && cargo build --release && ls && mv target/release/Resu ../file_rust")
+            return "file_rust"
         
 
     except FileNotFoundError:
@@ -70,12 +71,21 @@ def run_executable(executable):
                         result = subprocess.run(["./" + executable, str(3), str(j),str(k)], capture_output=True, text=True)
                         values = [float(x) for x in result.stdout.strip().split()]        
                         writer.writerow([3,j,j,k,values[0],values[1],values[2]])
+        elif(exe=="file_rust"):
+            with open('data_rust.csv','a',newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(['Function','Line','Col','Time'])
+                for j in range(600,3001,400):
+                    result = subprocess.run(["./" + executable, str(2), str(j)], capture_output=True, text=True)
+                    values = [float(x) for x in result.stdout.strip().split()]        
+                    writer.writerow([1,j,j,values[0]])
+
 
     else:
         print("Error: Executable not found.")
 
 if __name__ == "__main__":
-    file = input("Enter either omp or file:")
+    file = input("Enter either omp or file or file_rust:")
     output_file = "program"
     exe = compile_cpp(file)
     if exe:

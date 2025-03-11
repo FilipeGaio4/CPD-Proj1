@@ -40,7 +40,7 @@ fn on_mult(line: u32, col: u32) -> u128{
     return result_time.as_millis();
 }
 
-fn on_mult_unsafe(line: u32, col: u32) -> u128 {
+fn on_mult_unsafe(line: u32, col: u32)->u128 {
     let size = (line * col) as usize;
 
     // Define the memory layout
@@ -74,7 +74,7 @@ fn on_mult_unsafe(line: u32, col: u32) -> u128 {
                 for k in 0..line {
                     temp += *pha.add((i * col + k) as usize) * *phb.add((k * col + j) as usize);
                 }
-                ptr::write(phc.add((i * col + j) as usize), temp);
+                phc.add((i * col + j) as usize).write_volatile(temp); // Forces memory write
             }
         }
         let result_time = start.elapsed();
