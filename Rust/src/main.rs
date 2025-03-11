@@ -1,8 +1,9 @@
 use std::alloc::{alloc, dealloc, Layout};
+use std::env;
 use std::ptr;
 use std::{cmp::min, io, time::Instant, vec};
 
-fn on_mult(line: u32, col: u32) {
+fn on_mult(line: u32, col: u32) -> u128{
     let mut _st: [char; 100];
 
     let mut temp: f64;
@@ -36,17 +37,10 @@ fn on_mult(line: u32, col: u32) {
     }
     let result_time = start.elapsed();
 
-    println!("Time in milliseconds: {}", result_time.as_millis());
-
-    println!("Result Matrix is:");
-    for _i in 0..1 {
-        for j in 0..(min(10, col)) {
-            println!("{}", phc[j as usize]);
-        }
-    }
+    return result_time.as_millis();
 }
 
-fn on_mult_unsafe(line: u32, col: u32) {
+fn on_mult_unsafe(line: u32, col: u32) -> u128 {
     let size = (line * col) as usize;
 
     // Define the memory layout
@@ -85,48 +79,43 @@ fn on_mult_unsafe(line: u32, col: u32) {
         }
         let result_time = start.elapsed();
 
-        println!("Time in milliseconds: {}", result_time.as_millis());
-
-        println!("Result Matrix is:");
-        for _i in 0..1 {
-            for j in 0..(min(10, col)) {
-                println!("{}", *phc.add(j as usize));
-            }
-        }
+        return result_time.as_millis();
     }
 }
 
 fn main() {
-    loop {
-        println!("1. Multiplication");
-        println!("2. Multiplication Unsafe");
-        println!("3. Line Multiplication");
-        println!("4. Block Multiplication");
+    let args: Vec<String> = env::args().collect();
 
-        let mut choice = String::new();
-
-        io::stdin().read_line(&mut choice).expect("Error");
-
-        let choice: u8 = match choice.trim().parse() {
-            Ok(num) => num,
-            Err(_) => break,
-        };
-
-        let mut choice2 = String::new();
-
-        println!("Dimensions: lins=cols ? ");
-
-        io::stdin().read_line(&mut choice2).expect("Error");
-
-        let choice2: u32 = match choice2.trim().parse() {
-            Ok(size) => size,
-            Err(_) => panic!("Error"),
-        };
-
-        match choice {
-            1 => on_mult(choice2, choice2),
-            2 => on_mult_unsafe(choice2, choice2),
-            _ => break,
-        }
+    if args.len() != 3 {
+        eprintln!("Usage: {} <option> <size>", args[0]);
+        eprintln!("Options: \n 1 - Multiplication \n 2 - Multiplication Unsafe");
+        std::process::exit(1);
     }
+
+    let choice: u8 = match args[1].parse() {
+        Ok(num) => num,
+        Err(_) => {
+            eprintln!("Invalid choice. Use 1 for Multiplication, 2 for Multiplication Unsafe.");
+            std::process::exit(1);
+        }
+    };
+
+    let size: u32 = match args[2].parse() {
+        Ok(num) => num,
+        Err(_) => {
+            eprintln!("Invalid size. Please provide a positive integer.");
+            std::process::exit(1);
+        }
+    };
+
+    let res:u128 = match choice {
+        1 => on_mult(size, size),
+        2 => on_mult_unsafe(size, size),
+        _ => {
+                    eprintln!("Invalid option. Use 1 for Multiplication, 2 for Multiplication Unsafe.");
+                    std::process::exit(1);
+                }
+    };
+
+    println!("{}", res); // Simple way to print
 }
