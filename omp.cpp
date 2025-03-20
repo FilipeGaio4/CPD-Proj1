@@ -168,11 +168,11 @@ omp_set_num_threads(numThread); // Set number of threads to 4
   // cout << st;
 
   // cout << "Result matrix: " << endl;
-  for (i = 0; i < 1; i++) {
-    for (j = 0; j < min(10, m_br); j++)
-      cout << phc[j] << " ";
-  }
-  cout << endl;
+  // for (i = 0; i < 1; i++) {
+  //   for (j = 0; j < min(10, m_br); j++)
+  //     cout << phc[j] << " ";
+  // }
+  // cout << endl;
 
   free(pha);
   free(phb);
