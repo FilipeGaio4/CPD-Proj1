@@ -10,7 +10,7 @@ using namespace std;
 
 #define SYSTEMTIME clock_t
 
-double OnMult(int m_ar, int m_br) {
+double OnMult(int m_ar, int m_br, int numThread) {
 
   SYSTEMTIME Time1, Time2;
   double ompTime1, ompTime2;
@@ -35,6 +35,7 @@ double OnMult(int m_ar, int m_br) {
   Time1 = clock();
   ompTime1 = omp_get_wtime();
 
+  omp_set_num_threads(numThread); // Set number of threads to 4
 // #pragma omp parallel for collapse(2)
 #pragma omp parallel for
   for (i = 0; i < m_ar; i++) {
@@ -69,7 +70,7 @@ double OnMult(int m_ar, int m_br) {
   return ompTime2 - ompTime1;
 }
 
-double OnMultLine(int m_ar, int m_br) {
+double OnMultLine(int m_ar, int m_br,  int numThread) {
   SYSTEMTIME Time1, Time2;
   double ompTime1, ompTime2;
   char st[100];
@@ -91,6 +92,7 @@ double OnMultLine(int m_ar, int m_br) {
   Time1 = clock();
   ompTime1 = omp_get_wtime();
 
+  omp_set_num_threads(numThread); // Set number of threads to 4
 // #pragma omp parallel for    // Este é pior
 #pragma omp parallel for collapse(2)
   for (i = 0; i < m_ar; i++)
@@ -119,7 +121,7 @@ double OnMultLine(int m_ar, int m_br) {
   return ompTime2 - ompTime1;
 }
 
-double OnMultBlock(int m_ar, int m_br, int bkSize) {
+double OnMultBlock(int m_ar, int m_br, int bkSize, int numThread) {
   SYSTEMTIME Time1, Time2;
   double ompTime1, ompTime2;
   char st[100];
@@ -142,6 +144,7 @@ double OnMultBlock(int m_ar, int m_br, int bkSize) {
   ompTime1 = omp_get_wtime();
 
   int tid;
+omp_set_num_threads(numThread); // Set number of threads to 4
 #pragma omp parallel
   {
 #pragma omp for
@@ -197,7 +200,7 @@ void init_papi() {
 }
 
 int main(int argc, char *argv[]) {
-  int op, lin, col, blockSize;
+  int op, lin, col, blockSize, numThread;
 
   int EventSet = PAPI_NULL;
   long long values[2];
@@ -219,7 +222,7 @@ int main(int argc, char *argv[]) {
   if (ret != PAPI_OK)
     cout << "ERROR: PAPI_L2_DCM" << endl;
 
-  if (argc < 3) {
+  if (argc < 4) {
     cout << "Usage: ./program <operation> <matrix_size> [block_size]" << endl;
     cout << "Operations: 1 = Multiplication, 2 = Line Multiplication, 3 = "
             "Block Multiplication"
@@ -232,12 +235,16 @@ int main(int argc, char *argv[]) {
   col = lin;           // Square matrix
 
   double time;
-  if (op == 3 && argc < 4) {
+  if (op == 3 && argc < 5) {
     cout << "Error: Block multiplication requires a block size parameter."
          << endl;
     return 1;
   } else if (op == 3) {
     blockSize = atoi(argv[3]);
+    numThread = atoi(argv[4]);
+  } else {
+
+    numThread = atoi(argv[3]);
   }
   ret = PAPI_start(EventSet);
   if (ret != PAPI_OK)
@@ -245,13 +252,13 @@ int main(int argc, char *argv[]) {
 
   switch (op) {
   case 1:
-    time = OnMult(lin, col);
+    time = OnMult(lin, col, numThread);
     break;
   case 2:
-    time = OnMultLine(lin, col);
+    time = OnMultLine(lin, col, numThread);
     break;
   case 3:
-    time = OnMultBlock(lin, col, blockSize);
+    time = OnMultBlock(lin, col, blockSize, numThread);
     break;
   default:
     cout << "Invalid operation selected!" << endl;
@@ -280,5 +287,5 @@ int main(int argc, char *argv[]) {
   if (ret != PAPI_OK)
     std::cout << "FAIL destroy" << endl;
 
-  cout << time << " " << values[0] << " "<< values[1];
+  cout << time << " " << values[0] << " " << values[1];
 }
