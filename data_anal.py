@@ -126,7 +126,7 @@ def single_vs_multi_core(data_single, data_parallel):
         style="Implementation",  # Different line styles for Rust, Single, Parallel
         markers=True
     )
-    plt.title("Execution Time vs Matrix Size (Different Thread Counts), For function 2")
+    plt.title("Execution Time vs Matrix Size (Different Thread Counts) - For function 2")
     plt.ylabel("Execution Time (ms)")
     plt.xlabel("Matrix Size (Columns)")
     plt.legend(title="Threads")
@@ -252,7 +252,7 @@ def block_matrix_parallel_threads(data_parallel):
         ax.grid(True, linestyle="--", linewidth=0.5)
 
     # Adjust layout
-    plt.suptitle("Execution Time vs Block Size & Matrix Size - Function 3 (Parallel)")
+    plt.suptitle("Execution Time vs Block Size & Matrix Size - Function 3 - Parallel")
     plt.tight_layout(rect=(0, 0, 1, 0.96))
     plt.show()
 
