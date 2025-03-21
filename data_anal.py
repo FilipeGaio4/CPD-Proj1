@@ -225,10 +225,10 @@ def block_matrix_parallel_threads(data_parallel):
     data_parallel["Thread Number"] = pd.to_numeric(data_parallel["Thread Number"], errors="coerce")
 
     # Select unique thread numbers for separate plots
-    unique_threads = sorted(data_parallel["Thread Number"].unique())[:4]  # Pick first 4 unique thread numbers
+    unique_threads = sorted(data_parallel["Thread Number"].unique())[:3]  # Pick first 4 unique thread numbers
 
     # **Plot: 4 Subplots for Different Thread Numbers**
-    fig, axes = plt.subplots(2, 2, figsize=(14, 10), sharex=True, sharey=True)
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6), sharex=True, sharey=True)
     axes = axes.flatten()  # Convert to a 1D array for easier iteration
 
     for i, thread in enumerate(unique_threads):
@@ -319,7 +319,7 @@ def cache_misses_parallel(data_single, function_id,thread_id):
 
     # Filter for the selected function
     data_filtered = data_single.query(f"Function == {function_id}").copy()
-    data_filtered = data_single.query(f"Thread Number == {thread_id}").copy()
+    data_filtered = data_single[data_single["Thread Number"] == thread_id].copy()
 
     # If Function == 3, include Block Size in analysis
     if function_id == 3:
@@ -343,16 +343,16 @@ def cache_misses_parallel(data_single, function_id,thread_id):
     if function_id == 3:
         # Differentiate by Block Size
         sns.lineplot(data=data_filtered, x="Col", y="L1", hue="Block Size", 
-                     marker="o", palette="coolwarm", linestyle="--")  # Dotted for L1
+                     marker="o", palette="coolwarm", linestyle="--",ci=None)  # Dotted for L1
         sns.lineplot(data=data_filtered, x="Col", y="L2", hue="Block Size", 
-                     marker="s", palette="coolwarm", linestyle="-")   # Solid for L2
+                     marker="s", palette="coolwarm", linestyle="-",ci=None)   # Solid for L2
         plt.legend(title="Block Size")
     else:
         # Standard Single-Core Cache Miss Plot
         sns.lineplot(data=data_filtered, x="Col", y="L1", label="L1 Cache Misses", 
-                     marker="o", color="b", linestyle="--")  # Dotted for L1
+                     marker="o", color="b", linestyle="--",ci=None)  # Dotted for L1
         sns.lineplot(data=data_filtered, x="Col", y="L2", label="L2 Cache Misses", 
-                     marker="s", color="r", linestyle="-")   # Solid for L2
+                     marker="s", color="r", linestyle="-",ci=None)   # Solid for L2
         plt.legend(title="Cache Level")
 
     # Titles and Labels

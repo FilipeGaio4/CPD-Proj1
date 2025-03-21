@@ -26,7 +26,7 @@ def run_executable(executable):
             with open('data_parallel.csv','a',newline='') as file:
                 writer = csv.writer(file)
                 writer.writerow(['Function','Thread Number','Line','Col','Block Size','Time','L1','L2'])
-                for thread in range(1,17,4):
+                for thread in [1,8,16]:
                     for j in range(600,3001,400):
                         result = subprocess.run(["./" + executable, str(1), str(j),str(thread)], capture_output=True, text=True)
                         values = [float(x) for x in result.stdout.strip().split()]        
@@ -51,26 +51,9 @@ def run_executable(executable):
             with open('data_single.csv','a',newline='') as file:
                 writer = csv.writer(file)
                 writer.writerow(['Function','Line','Col','Block Size','Time','L1','L2'])
-                for j in range(600,3001,400):
-                    result = subprocess.run(["./" + executable, str(1), str(j)], capture_output=True, text=True)
-                    values = [float(x) for x in result.stdout.strip().split()]        
-                    writer.writerow([1,j,j,'None',values[0],values[1],values[2]])
-
-                for j in range(600,3001,400):
-                    result = subprocess.run(["./" + executable, str(2), str(j)], capture_output=True, text=True)
-                    values = [float(x) for x in result.stdout.strip().split()]        
-                    writer.writerow([2,j,j,'None',values[0],values[1],values[2]])
-                for j in range(4096,10241,2048):
-                    result = subprocess.run(["./" + executable, str(2), str(j)], capture_output=True, text=True)
-                    values = [float(x) for x in result.stdout.strip().split()]        
-                    writer.writerow([2,j,j,'None',values[0],values[1],values[2]])
-                for j in range(4096,10241,2048):
-                    k = 256
-                    while k < 4096:
-                        k *= 2
-                        result = subprocess.run(["./" + executable, str(3), str(j),str(k)], capture_output=True, text=True)
-                        values = [float(x) for x in result.stdout.strip().split()]        
-                        writer.writerow([3,j,j,k,values[0],values[1],values[2]])
+                result = subprocess.run(["./" + executable, str(3), str(10240),str(4096)], capture_output=True, text=True)
+                values = [float(x) for x in result.stdout.strip().split()]        
+                writer.writerow([3,10240,10240,4096,values[0],values[1],values[2]])
         elif(exe=="file_rust"):
             with open('data_rust.csv','a',newline='') as file:
                 writer = csv.writer(file)
