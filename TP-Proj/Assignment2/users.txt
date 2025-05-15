@@ -1,3 +1,4 @@
 joao:senha123
 maria:abc321
 filipe:fff
+miguel:mmm
