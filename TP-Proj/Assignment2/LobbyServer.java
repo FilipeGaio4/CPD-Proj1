@@ -112,11 +112,7 @@ public class LobbyServer {
                         out.println("(No rooms yet)");
                         out.flush();
                     } else {
-                        for (String room : rooms.keySet()) {
-                            System.out.println(room);
-                            out.println("- " + room);
-                            out.flush();
-                        }
+                        out.println(rooms.keySet());
                     }
                 }
 
@@ -125,10 +121,11 @@ public class LobbyServer {
                 System.out.println("The user chose the option: "+choice);
                 switch (choice) {
                     case "1":
-                        if (joinRoom(out, in)) {
+                        if (!joinRoom(out, in)) {
                             socket.close();
                             return;
                         }
+                        System.out.println("Joining room...");
                         break;
                     case "2":
                         createRoom(out, in);
@@ -144,8 +141,7 @@ public class LobbyServer {
         }
 
         private boolean joinRoom(PrintWriter out, BufferedReader in) throws IOException {
-            out.println("Enter room name:");
-            out.flush();
+;
             String roomName = in.readLine();
             System.out.println("Received room name: " + roomName);
 
@@ -154,13 +150,11 @@ public class LobbyServer {
                 if (rooms.containsKey(roomName)) {
                     int port = rooms.get(roomName);
                     String token = generateToken(username);
-                    out.println("Connect to room '" + roomName + "' on port " + port + " with token:" + token);
-                    out.println("Usage:");
-                    out.println("telnet localhost " + port);
-                    out.println("When asked provide token:");
                     out.println(token);
-                    out.println("exit");
                     out.flush();
+                    out.println(port);
+                    out.flush();
+                    System.out.println("AIIIIIII");
                     return true;
                 } else {
                     out.println("Room does not exist.");
@@ -171,8 +165,7 @@ public class LobbyServer {
         }
 
         private void createRoom(PrintWriter out, BufferedReader in) throws IOException {
-            out.println("Enter new room name:");
-            out.flush();
+
             String roomName = in.readLine();
             System.out.println("Received room name: " + roomName);
 

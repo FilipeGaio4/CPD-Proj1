@@ -62,7 +62,15 @@ public class Client {
             System.out.println("\n--- MENU ---");
             System.out.println("Available rooms:");
 
-            System.out.println(in.readLine());
+            String ansewr = in.readLine();
+            if (ansewr.contains("[")) {
+                for (var i: ansewr.replaceAll("[\\[\\],]", "").split(" ")) {
+                    System.out.println("- "+ i);
+                }
+            }else{
+                System.out.println(ansewr);
+            }
+
 
 
             System.out.println("\n1 - Join a room");
@@ -77,13 +85,25 @@ public class Client {
                 return;
             } else {
 
-                String roomName = in.readLine();
-                System.out.println(roomName);
-                choice = scanner.nextLine();
-                out.println(choice);
+                System.out.println("Enter a room name: ");
+                String roomName = scanner.nextLine();
+                out.println(roomName);
                 out.flush();
 
-                System.out.println(in.readLine());
+                if (choice.equals("1")) {
+
+                    String token = in.readLine();
+                    String port = in.readLine();
+                    System.out.println("Connect to room '" + roomName + "' on port " + port + " with token:" + token);
+                    System.out.println("Usage:");
+                    System.out.println("telnet localhost " + port);
+                    System.out.println("When asked provide token:");
+                    rooms.put(roomName, Integer.parseInt(port));
+                    System.out.println(token);
+                }else{
+                    System.out.println(in.readLine());
+
+                }
 
             }
         }
