@@ -1,5 +1,7 @@
 package TCPServer.models;
 
+import TCPServer.lobby.LobbyServer;
+
 import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Map;
@@ -23,7 +25,9 @@ public class Room {
     }
 
     public synchronized void listUsers(PrintWriter out) { // TODO : change here to our lock
-        out.println(users.keySet());
+        for (var i : users.keySet()) {
+            out.println("- " + i);
+        }
         out.flush();
     }
 

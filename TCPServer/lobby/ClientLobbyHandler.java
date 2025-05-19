@@ -26,7 +26,21 @@ public class ClientLobbyHandler implements Runnable {
             while (true) {
                 synchronized (LobbyServer.rooms) { // TODO : change here to our lock
                     System.out.println(LobbyServer.rooms.keySet());
-                    out.println(LobbyServer.rooms.keySet());
+                    out.println("\n--- MENU ---");
+                    out.println("Available rooms");
+                    //out.println(LobbyServer.rooms.keySet());
+                    if (LobbyServer.rooms.keySet().size() == 0) {
+                        out.println("(No rooms available)");
+
+                    }else {
+                        for (var i : LobbyServer.rooms.keySet()) {
+                            out.println("- " + i);
+                        }
+                    }
+                    out.println("1 - Join a room");
+                    out.println("2 - Create a new room");
+                    out.println("3 - Quit");
+                    out.println("Choice: ");
                     out.flush();
                 }
                 String choice = in.readLine();
@@ -82,6 +96,8 @@ public class ClientLobbyHandler implements Runnable {
 
 
     private boolean joinRoom() throws IOException {
+        out.println("Enter a Room Name: ");
+        out.flush();
         String roomName = in.readLine();
         LobbyServer.printMessage("Room Name: " + roomName);
         Room room = LobbyServer.rooms.get(roomName);
@@ -99,6 +115,8 @@ public class ClientLobbyHandler implements Runnable {
     }
 
     private void createRoom() throws IOException {
+        out.println("Enter a Room Name: ");
+        out.flush();
         String roomName = in.readLine();
         System.out.println("Room Name: " + roomName);
         synchronized (LobbyServer.rooms) { // TODO : change here to our lock
@@ -130,6 +148,7 @@ public class ClientLobbyHandler implements Runnable {
             else if (msg.equalsIgnoreCase(":u")) {
                 synchronized (currentRoom) { // TODO : change here to our lock
                     currentRoom.listUsers(out);
+
                 }
             }
             else if (msg.startsWith(":m ")) {
@@ -142,7 +161,13 @@ public class ClientLobbyHandler implements Runnable {
                 String privateMessage = parts[2];
                 currentRoom.broadcast("[" + username + "] (private): " + privateMessage, receiver);
             }
-            
+            else if (msg.equalsIgnoreCase(":h")) {
+                out.println("RULES and Shortcuts:");
+                out.println("- ':q' to leave the room.");
+                out.println("- ':u' to list users.");
+                out.println("- ':m <username> <message>' to send a private message.");
+                out.println("- ':h' to see this help.");
+            }
             else if (msg.isEmpty()) {
                 continue;
             }
