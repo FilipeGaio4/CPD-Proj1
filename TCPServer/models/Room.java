@@ -23,10 +23,8 @@ public class Room {
     }
 
     public synchronized void listUsers(PrintWriter out) { // TODO : change here to our lock
-        out.println("Users in the room:");
-        for (String user : users.keySet()) {
-            out.println("- " + user);
-        }
+        out.println(users.keySet());
+        out.flush();
     }
 
     public synchronized void broadcast(String message) { // TODO : change here to our lock
