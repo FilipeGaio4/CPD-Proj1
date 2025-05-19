@@ -1,5 +1,8 @@
 package Assignment2;
 
+import javax.net.ssl.SSLServerSocket;
+import javax.net.ssl.SSLServerSocketFactory;
+import javax.net.ssl.SSLSocket;
 import java.io.*;
 import java.net.*;
 import java.util.*;
@@ -10,24 +13,30 @@ public class LobbyServer {
     private static Map<String, String> userCredentials = new HashMap<>();
     private static Map<String, Integer> rooms = new HashMap<>(); // nome da sala -> porta
     private static Map<String, String> activeTokens = new HashMap<>();
+    private static final String KEYSTORE_FILE = "Assignment2/server.keystore";
+    private static final String KEYSTORE_PASSWORD = "123456";
 
-    
+
     public static void main(String[] args) {
         loadUsers();
+        System.setProperty("javax.net.ssl.keyStore", KEYSTORE_FILE);
+        System.setProperty("javax.net.ssl.keyStorePassword", KEYSTORE_PASSWORD);
+        SSLServerSocketFactory sslServerSocketFactory = (SSLServerSocketFactory) SSLServerSocketFactory.getDefault();
 
-        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
+        // Create SSL Server Socket on the port
+        try (SSLServerSocket serverSocket = (SSLServerSocket) sslServerSocketFactory.createServerSocket(PORT);) {
             System.out.println("Lobby server started on port " + PORT);
-            
+
             while (true) {
-                Socket clientSocket = serverSocket.accept();
+                SSLSocket clientSocket = (SSLSocket) serverSocket.accept();
                 new Thread(new ClientLobbyHandler(clientSocket)).start();
             }
-            
+
         } catch (IOException e) {
             System.out.println("Lobby server error: " + e.getMessage());
         }
     }
-    
+
     private static String generateToken(String username) {
         String token = UUID.randomUUID().toString();
         activeTokens.put(token, username);
@@ -53,35 +62,38 @@ public class LobbyServer {
     }
 
     private static class ClientLobbyHandler implements Runnable {
-        private Socket socket;
+        private SSLSocket socket;
         private String username;
 
-        public ClientLobbyHandler(Socket socket) {
+        public ClientLobbyHandler(SSLSocket socket) {
             this.socket = socket;
         }
 
         @Override
         public void run() {
             try (
-                BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                PrintWriter out = new PrintWriter(socket.getOutputStream(), true)
+                    BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                    PrintWriter out = new PrintWriter(socket.getOutputStream(), true)
             ) {
-                out.println("Welcome to the chat system! Please log in.");
-                out.print("Username: ");
-                out.flush();
+                System.out.println("Waiting for data about User...");
                 username = in.readLine();
-                out.print("Password: ");
-                out.flush();
+                System.out.println(username);
+
                 String password = in.readLine();
+                System.out.println(password);
 
                 if (!authenticate(username, password)) {
                     out.println("Authentication failed. Closing connection.");
-                    socket.close();
+                    try {
+                        socket.close();
+                    } catch (IOException e) {
+                        System.out.println("Error while closing socket: " + e.getMessage());
+                    }
                     return;
                 }
 
                 out.println("Authentication successful. Welcome, " + username + "!");
-                handleMenu(out, in, username);
+                handleMenu(out, in);
 
             } catch (IOException e) {
                 System.out.println("Error handling lobby client: " + e.getMessage());
@@ -92,32 +104,28 @@ public class LobbyServer {
             return userCredentials.containsKey(username) && userCredentials.get(username).equals(password);
         }
 
-        private void handleMenu(PrintWriter out, BufferedReader in, String username) throws IOException {
+        private void handleMenu(PrintWriter out, BufferedReader in) throws IOException {
             while (true) {
-                out.println("\n--- MENU ---");
-                out.println("Available rooms:");
+                System.out.println("Beginning");
                 synchronized (rooms) {
                     if (rooms.isEmpty()) {
                         out.println("(No rooms yet)");
+                        out.flush();
                     } else {
-                        for (String room : rooms.keySet()) {
-                            out.println("- " + room);
-                        }
+                        out.println(rooms.keySet());
                     }
                 }
-                out.println("\n1 - Join a room");
-                out.println("2 - Create a new room");
-                out.println("3 - Quit");
-                out.print("Choice: ");
-                out.flush();
+
 
                 String choice = in.readLine();
+                System.out.println("The user chose the option: "+choice);
                 switch (choice) {
                     case "1":
-                        if(joinRoom(out, in)) {
+                        if (!joinRoom(out, in)) {
                             socket.close();
                             return;
-                        } 
+                        }
+                        System.out.println("Joining room...");
                         break;
                     case "2":
                         createRoom(out, in);
@@ -133,32 +141,34 @@ public class LobbyServer {
         }
 
         private boolean joinRoom(PrintWriter out, BufferedReader in) throws IOException {
-            out.print("Enter room name: ");
-            out.flush();
+;
             String roomName = in.readLine();
+            System.out.println("Received room name: " + roomName);
 
             // TODO : Passado algum tempo podemos apagar o token para n ficar infinitamente
             synchronized (rooms) {
                 if (rooms.containsKey(roomName)) {
                     int port = rooms.get(roomName);
-                    String token = generateToken(username); 
-                    out.println("Connect to room '" + roomName + "' on port " + port + " with token:" + token);
-                    out.println("Usage:");
-                    out.println("telnet localhost " + port);
-                    out.println("When asked provide token:");
+                    String token = generateToken(username);
                     out.println(token);
+                    out.flush();
+                    out.println(port);
+                    out.flush();
+                    System.out.println("AIIIIIII");
                     return true;
                 } else {
                     out.println("Room does not exist.");
+                    out.flush();
                     return false;
                 }
             }
         }
 
         private void createRoom(PrintWriter out, BufferedReader in) throws IOException {
-            out.print("Enter new room name: ");
-            out.flush();
+
             String roomName = in.readLine();
+            System.out.println("Received room name: " + roomName);
+
 
             synchronized (rooms) {
                 if (rooms.containsKey(roomName)) {
