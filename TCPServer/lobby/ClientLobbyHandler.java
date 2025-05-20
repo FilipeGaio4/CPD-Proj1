@@ -13,6 +13,7 @@ public class ClientLobbyHandler implements Runnable {
     private PrintWriter out;
     private BufferedReader in;
     private Room currentRoom;
+    private String token_uuid;
 
     public ClientLobbyHandler(Socket socket) {
         this.socket = socket;
@@ -77,8 +78,10 @@ public class ClientLobbyHandler implements Runnable {
         }
         LobbyServer.printMessage("User " + username + " logged in.");
         out.println("Authenticated as " + username);
-        LobbyServer.addActiveUser(username);
+        token_uuid = LobbyServer.generateToken(username);
+        out.println("Your token: " + token_uuid);
         out.flush();
+        LobbyServer.addActiveUser(username);
     }
 
     private void menu() throws IOException {
@@ -115,8 +118,11 @@ public class ClientLobbyHandler implements Runnable {
         // associa o cliente à sala
         currentRoom = room;
         room.addUser(username, out);
+        // atualiza o token com a sala
+        LobbyServer.updateTokenRoom(token_uuid, roomName);
         out.println("Joined room " + roomName);
         out.flush();
+
         LobbyServer.printMessage("User " + username + " joined room " + roomName);
         return true;
     }
