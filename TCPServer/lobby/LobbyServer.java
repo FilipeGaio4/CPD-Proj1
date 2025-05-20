@@ -3,7 +3,9 @@ package TCPServer.lobby;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -15,6 +17,7 @@ import javax.net.ssl.SSLSocket;
 
 public class LobbyServer {
     public static final int PORT = 12345;
+    public static final List<String> active_users = new ArrayList<>();
     public static final Map<String, Room> rooms = new HashMap<>();
     private static final Map<String, String> activeTokens = new HashMap<>();
     private static final String KEYSTORE_FILE = "TCPServer/lobby/server.keystore";
@@ -46,6 +49,18 @@ public class LobbyServer {
 
     public static String consumeToken(String token) {
         return activeTokens.remove(token); // devolve username ou null
+    }
+
+    public static void addActiveUser(String username) {
+    active_users.add(username);
+    }
+
+    public static void removeActiveUser(String username) {
+        active_users.remove(username);
+    }
+
+    public static List<String> getActiveUsers() {
+        return new ArrayList<>(active_users); // devolve uma cópia
     }
 
     public static void printMessage(String message) {

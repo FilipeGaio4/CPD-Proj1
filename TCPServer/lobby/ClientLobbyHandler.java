@@ -24,25 +24,7 @@ public class ClientLobbyHandler implements Runnable {
             setupIO();
             login();
             while (true) {
-                synchronized (LobbyServer.rooms) { // TODO : change here to our lock
-                    System.out.println(LobbyServer.rooms.keySet());
-                    out.println("\n--- MENU ---");
-                    out.println("Available rooms");
-                    //out.println(LobbyServer.rooms.keySet());
-                    if (LobbyServer.rooms.keySet().size() == 0) {
-                        out.println("(No rooms available)");
-
-                    }else {
-                        for (var i : LobbyServer.rooms.keySet()) {
-                            out.println("- " + i);
-                        }
-                    }
-                    out.println("1 - Join a room");
-                    out.println("2 - Create a new room");
-                    out.println("3 - Quit");
-                    out.println("Choice: ");
-                    out.flush();
-                }
+                menu();
                 String choice = in.readLine();
                 System.out.println(choice);
                 if (choice == null) break;
@@ -85,12 +67,37 @@ public class ClientLobbyHandler implements Runnable {
         //out.print("Password: "); out.flush();
         String pwd = in.readLine();
 
+        if (LobbyServer.active_users.contains(username)) {
+            out.println("User already logged in. Disconnecting.");
+            throw new IOException("User already logged in somewhere");
+        }
         if (!AuthManager.authenticate(username, pwd)) {
             out.println("Authentication failed. Disconnecting.");
             throw new IOException("Auth failed");
         }
         LobbyServer.printMessage("User " + username + " logged in.");
         out.println("Authenticated as " + username);
+        LobbyServer.addActiveUser(username);
+        out.flush();
+    }
+
+    private void menu() throws IOException {
+        System.out.println("Rooms: " + LobbyServer.rooms.keySet());
+        out.println("\n--- Available rooms ---");
+        synchronized (LobbyServer.rooms) { // TODO : change here to our lock
+            //out.println(LobbyServer.rooms.keySet());
+            if (LobbyServer.rooms.keySet().size() == 0) {
+                out.println(":no_rooms");
+                
+            }else {
+                String rooms_list = "";
+                for (var i : LobbyServer.rooms.keySet()) {
+                    rooms_list += "\n  -" + i;
+                }
+                out.println(rooms_list);
+            }
+        }
+        out.println(":menu");
         out.flush();
     }
 
@@ -126,6 +133,11 @@ public class ClientLobbyHandler implements Runnable {
                 return;
             }if(roomName.equals("")){
                 out.println("Insert a name please.");
+                out.flush();
+                return;
+            }
+            if (!roomName.matches("[A-Za-z0-9_]+")) {
+                out.println("Invalid room name. Only alphanumeric characters and underscores are allowed.");
                 out.flush();
                 return;
             }
@@ -180,6 +192,7 @@ public class ClientLobbyHandler implements Runnable {
 
     private void cleanup() {
         try { socket.close(); } catch (IOException ignored) {}
+        LobbyServer.removeActiveUser(username);
         if (currentRoom != null) {
             currentRoom.removeUser(username);
         }
