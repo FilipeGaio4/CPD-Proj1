@@ -24,7 +24,7 @@ public class LobbyServer {
         SSLServerSocketFactory sslServerSocketFactory = (SSLServerSocketFactory) SSLServerSocketFactory.getDefault();
 
         // Create SSL Server Socket on the port
-        try (SSLServerSocket serverSocket = (SSLServerSocket) sslServerSocketFactory.createServerSocket(PORT);) {
+        try (SSLServerSocket serverSocket = (SSLServerSocket) sslServerSocketFactory.createServerSocket(PORT)) {
             System.out.println("Lobby server started on port " + PORT);
 
             while (true) {

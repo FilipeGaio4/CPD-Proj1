@@ -24,8 +24,9 @@ public class ClientLobbyHandler implements Runnable {
             setupIO();
             login();
             while (true) {
-                showMenu();
+                menu();
                 String choice = in.readLine();
+                System.out.println(choice);
                 if (choice == null) break;
 
                 switch (choice) {
@@ -59,37 +60,53 @@ public class ClientLobbyHandler implements Runnable {
     }
 
     private void login() throws IOException {
-        out.println("Welcome! Please log in.");
-        out.print("Username: "); out.flush();
+        //out.println("Welcome! Please log in.");
+        //out.print("Username: "); out.flush();
         username = in.readLine();
-        out.print("Password: "); out.flush();
+        System.out.println("Username: " + username);
+        //out.print("Password: "); out.flush();
         String pwd = in.readLine();
 
+        if (LobbyServer.active_users.contains(username)) {
+            out.println("User already logged in. Disconnecting.");
+            throw new IOException("User already logged in somewhere");
+        }
         if (!AuthManager.authenticate(username, pwd)) {
             out.println("Authentication failed. Disconnecting.");
             throw new IOException("Auth failed");
         }
         LobbyServer.printMessage("User " + username + " logged in.");
         out.println("Authenticated as " + username);
+        LobbyServer.addActiveUser(username);
+        out.flush();
     }
 
-    private void showMenu() {
-        out.println("\n--- MENU ---");
-        out.println("1 - Join a room");
-        out.println("2 - Create a new room");
-        out.println("3 - Quit");
-        out.print("Choice: "); out.flush();
-    }
-
-    private boolean joinRoom() throws IOException {
-        out.println("Available rooms:");
+    private void menu() throws IOException {
+        System.out.println("Rooms: " + LobbyServer.rooms.keySet());
+        out.println("\n--- Available rooms ---");
         synchronized (LobbyServer.rooms) { // TODO : change here to our lock
-            for (String roomName : LobbyServer.rooms.keySet()) {
-                out.println(" - " + roomName);
+            //out.println(LobbyServer.rooms.keySet());
+            if (LobbyServer.rooms.keySet().size() == 0) {
+                out.println(":no_rooms");
+                
+            }else {
+                String rooms_list = "";
+                for (var i : LobbyServer.rooms.keySet()) {
+                    rooms_list += "\n  -" + i;
+                }
+                out.println(rooms_list);
             }
         }
-        out.print("Enter room name: "); out.flush();
+        out.println(":menu");
+        out.flush();
+    }
+
+
+    private boolean joinRoom() throws IOException {
+        out.println("Enter a Room Name: ");
+        out.flush();
         String roomName = in.readLine();
+        LobbyServer.printMessage("Room Name: " + roomName);
         Room room = LobbyServer.rooms.get(roomName);
         if (room == null) {
             out.println("Room does not exist.");
@@ -98,39 +115,52 @@ public class ClientLobbyHandler implements Runnable {
         // associa o cliente à sala
         currentRoom = room;
         room.addUser(username, out);
+        out.println("Joined room " + roomName);
+        out.flush();
         LobbyServer.printMessage("User " + username + " joined room " + roomName);
         return true;
     }
 
     private void createRoom() throws IOException {
-        out.print("Enter new room name: "); out.flush();
+        out.println("Enter a Room Name: ");
+        out.flush();
         String roomName = in.readLine();
+        System.out.println("Room Name: " + roomName);
         synchronized (LobbyServer.rooms) { // TODO : change here to our lock
             if (LobbyServer.rooms.containsKey(roomName)) {
                 out.println("Room already exists.");
+                out.flush();
+                return;
+            }if(roomName.equals("")){
+                out.println("Insert a name please.");
+                out.flush();
+                return;
+            }
+            if (!roomName.matches("[A-Za-z0-9_]+")) {
+                out.println("Invalid room name. Only alphanumeric characters and underscores are allowed.");
+                out.flush();
                 return;
             }
             Room room = new Room(roomName);
             LobbyServer.rooms.put(roomName, room);
             LobbyServer.printMessage("Room " + roomName + " created by " + username);
             out.println("Room '" + roomName + "' created.");
+            out.flush();
         }
     }
 
     private void chatLoop() throws IOException {
-        out.println("Entered room: " + currentRoom.getName());
-        out.println("Type ':q' to leave and :h for help.");
         String msg;
         while ((msg = in.readLine()) != null) {
             if (msg.equalsIgnoreCase(":q")) {
                 currentRoom.removeUser(username);
                 currentRoom = null;
-                return; 
+                return;
             }
             else if (msg.equalsIgnoreCase(":u")) {
-                out.println("Users in the room:");
                 synchronized (currentRoom) { // TODO : change here to our lock
                     currentRoom.listUsers(out);
+
                 }
             }
             else if (msg.startsWith(":m ")) {
@@ -145,15 +175,16 @@ public class ClientLobbyHandler implements Runnable {
             }
             else if (msg.equalsIgnoreCase(":h")) {
                 out.println("RULES and Shortcuts:");
-                out.println("\t- ':q' to leave the room.");
-                out.println("\t- ':u' to list users.");
-                out.println("\t- ':m <username> <message>' to send a private message.");
-                out.println("\t- ':h' to see this help.");
+                out.println("- ':q' to leave the room.");
+                out.println("- ':u' to list users.");
+                out.println("- ':m <username> <message>' to send a private message.");
+                out.println("- ':h' to see this help.");
             }
             else if (msg.isEmpty()) {
                 continue;
             }
             else {
+                System.out.println("BROADCAST: " + msg);
                 currentRoom.broadcast("[" + username + "]: " + msg);
             }
         }
@@ -161,6 +192,7 @@ public class ClientLobbyHandler implements Runnable {
 
     private void cleanup() {
         try { socket.close(); } catch (IOException ignored) {}
+        LobbyServer.removeActiveUser(username);
         if (currentRoom != null) {
             currentRoom.removeUser(username);
         }
