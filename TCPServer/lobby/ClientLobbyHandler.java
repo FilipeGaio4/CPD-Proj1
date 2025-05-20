@@ -59,7 +59,7 @@ public class ClientLobbyHandler implements Runnable {
         out = new PrintWriter(socket.getOutputStream(), true);
     }
 
-    private void login() throws IOException {
+    private void login() throws IOException { // TODO : allow register but becareful with names. .matches("[A-Za-z0-9_]+") and not you
         String choice = in.readLine();
         if (choice.equals("1")){
             username = in.readLine();

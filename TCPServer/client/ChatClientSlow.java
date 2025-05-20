@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 
-public class ChatClient {
+public class ChatClientSlow {
     private static final String SERVER_HOST = "localhost";
     private static final int SERVER_PORT = 12345;
     private static final String TRUSTSTORE_FILE = "TCPServer/client/client.truststore";  // Truststore file containing server's public certificate
@@ -20,7 +20,6 @@ public class ChatClient {
         LOBBY,
         ROOM
     }
-    private static String username;
     private static ClientState client_state = ClientState.UNDEFINED;
     private static final Map<String, String> serverMessages = new HashMap<>();
     static {
@@ -76,8 +75,7 @@ public class ChatClient {
         client_state = ClientState.LOBBY; // Set state to lobby by default, if room server will send
         if (choice.equals("1")) {
             System.out.println("Enter Username:");
-            username = scanner.nextLine();
-            out.println(username);
+            out.println(scanner.nextLine());
             System.out.println("Enter Password:");
             out.println(scanner.nextLine());
         } else if (choice.equals("2")) {
@@ -101,11 +99,12 @@ public class ChatClient {
             try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
                 String message;
                 while ((message = in.readLine()) != null) {
-                    if (message.startsWith("[" + username + "]")){
-                        message = "[You]: " + message.substring(message.indexOf("]") + 1);
-                        System.out.println(message);
+                    try {
+                        Thread.sleep(2000);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
                     }
-                    else if (serverMessages.containsKey(message.trim())) {
+                    if (serverMessages.containsKey(message.trim())) {
                         System.out.println(serverMessages.get(message.trim()));
                     } 
                     else if (message.startsWith(":change_state")) {
