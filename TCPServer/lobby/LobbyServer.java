@@ -3,6 +3,7 @@ package TCPServer.lobby;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,19 +13,28 @@ import java.util.ArrayList;
 import TCPServer.models.Room;
 import TCPServer.models.Token;
 
+import javax.net.ssl.SSLServerSocket;
+import javax.net.ssl.SSLServerSocketFactory;
+import javax.net.ssl.SSLSocket;
+
 public class LobbyServer {
     public static final int PORT = 12345;
+    public static final List<String> active_users = new ArrayList<>();
     public static final Map<String, Room> rooms = new HashMap<>();
     private static final TokenManager tokenManager = new TokenManager();
+    private static final String KEYSTORE_FILE = "TCPServer/lobby/server.keystore";
+    private static final String KEYSTORE_PASSWORD = "123456";
 
     public static void main(String[] args) {
         AuthManager.loadUsers();
-
-        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
+        System.setProperty("javax.net.ssl.keyStore", KEYSTORE_FILE);
+        System.setProperty("javax.net.ssl.keyStorePassword", KEYSTORE_PASSWORD);
+        SSLServerSocketFactory sslServerSocketFactory = (SSLServerSocketFactory) SSLServerSocketFactory.getDefault();
+        try (SSLServerSocket serverSocket = (SSLServerSocket) sslServerSocketFactory.createServerSocket(PORT)) {
             System.out.println("Lobby server started on port " + PORT);
 
             while (true) {
-                Socket clientSocket = serverSocket.accept();
+                SSLSocket clientSocket = (SSLSocket) serverSocket.accept();
                 new Thread(new ClientLobbyHandler(clientSocket)).start();
             }
 
@@ -56,6 +66,18 @@ public class LobbyServer {
                 return;
             }
         }
+    }
+
+    public static void addActiveUser(String username) {
+    active_users.add(username);
+    }
+
+    public static void removeActiveUser(String username) {
+        active_users.remove(username);
+    }
+
+    public static List<String> getActiveUsers() {
+        return new ArrayList<>(active_users); // devolve uma cópia
     }
 
     public static void printMessage(String message) {

@@ -1,5 +1,7 @@
 package TCPServer.models;
 
+import TCPServer.lobby.LobbyServer;
+
 import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Map;
@@ -23,10 +25,10 @@ public class Room {
     }
 
     public synchronized void listUsers(PrintWriter out) { // TODO : change here to our lock
-        out.println("Users in the room:");
-        for (String user : users.keySet()) {
-            out.println("- " + user);
+        for (var i : users.keySet()) {
+            out.println("- " + i);
         }
+        out.flush();
     }
 
     public synchronized void broadcast(String message) { // TODO : change here to our lock
@@ -38,7 +40,7 @@ public class Room {
     public synchronized void broadcast(String message, String receiver) { // TODO : change here to our lock
         PrintWriter out = users.get(receiver);
         if (out != null) {
-            out.println(message);
+            out.println(message); // TODO : Test if one user is slow if no one receives it
         }
     }
 
