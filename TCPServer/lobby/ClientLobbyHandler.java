@@ -27,7 +27,6 @@ public class ClientLobbyHandler implements Runnable {
             while (true) {
                 menu();
                 String choice = in.readLine();
-                System.out.println(choice);
                 if (choice == null) break;
 
                 switch (choice) {
@@ -40,7 +39,7 @@ public class ClientLobbyHandler implements Runnable {
                         createRoom();
                         break;
                     case "3":
-                        out.println("Goodbye!");
+                        out.println(":goodbye");
                         return; 
                     default:
                         out.println("Invalid option.");
@@ -61,34 +60,64 @@ public class ClientLobbyHandler implements Runnable {
     }
 
     private void login() throws IOException {
-        //out.println("Welcome! Please log in.");
-        //out.print("Username: "); out.flush();
-        username = in.readLine();
-        System.out.println("Username: " + username);
-        //out.print("Password: "); out.flush();
-        String pwd = in.readLine();
+        String choice = in.readLine();
+        if (choice.equals("1")){
+            username = in.readLine();
+            System.out.println("Logging in user: " + username);
+            String pwd = in.readLine();
+
+            if (!AuthManager.authenticate(username, pwd)) {
+                out.println("Authentication failed. Disconnecting.");
+                throw new IOException("Auth failed");
+            }
+        }
+        else if (choice.equals("2")) {
+            String token_uuid = in.readLine();
+            System.out.println("Token: " + token_uuid);
+            Token token = LobbyServer.consumeToken(token_uuid);
+            username = token.getUsername();
+            if (username == null) {
+                out.println("Invalid token. Disconnecting.");
+                throw new IOException("Invalid token");
+            }
+            String room = token.getRoom() != null ? "ROOM" : "LOBBY";
+            change_state(room);
+        }
+        else {
+            out.println("Invalid option. Disconnecting.");
+            throw new IOException("Invalid option");
+        }
 
         if (LobbyServer.active_users.contains(username)) {
             out.println("User already logged in. Disconnecting.");
             throw new IOException("User already logged in somewhere");
         }
-        if (!AuthManager.authenticate(username, pwd)) {
-            out.println("Authentication failed. Disconnecting.");
-            throw new IOException("Auth failed");
-        }
         LobbyServer.printMessage("User " + username + " logged in.");
         out.println("Authenticated as " + username);
-        token_uuid = LobbyServer.generateToken(username);
-        out.println("Your token: " + token_uuid);
         out.flush();
+        if (choice.equals("1")){
+            token_uuid = LobbyServer.generateToken(username);
+            out.println("Your token: " + token_uuid);
+            out.flush();
+        }
         LobbyServer.addActiveUser(username);
     }
 
+    private void change_state(String state) throws IOException {
+        out.println(":change_state " + state);
+        out.flush();
+    }
+
     private void menu() throws IOException {
+        out.println(":menu");
+        out.flush();
+    }
+
+
+    private boolean joinRoom() throws IOException {
         System.out.println("Rooms: " + LobbyServer.rooms.keySet());
         out.println("\n--- Available rooms ---");
         synchronized (LobbyServer.rooms) { // TODO : change here to our lock
-            //out.println(LobbyServer.rooms.keySet());
             if (LobbyServer.rooms.keySet().size() == 0) {
                 out.println(":no_rooms");
                 
@@ -100,12 +129,6 @@ public class ClientLobbyHandler implements Runnable {
                 out.println(rooms_list);
             }
         }
-        out.println(":menu");
-        out.flush();
-    }
-
-
-    private boolean joinRoom() throws IOException {
         out.println("Enter a Room Name: ");
         out.flush();
         String roomName = in.readLine();
@@ -120,6 +143,7 @@ public class ClientLobbyHandler implements Runnable {
         room.addUser(username, out);
         // atualiza o token com a sala
         LobbyServer.updateTokenRoom(token_uuid, roomName);
+        out.println("Updated token: " + LobbyServer.getFullToken(token_uuid));
         out.println("Joined room " + roomName);
         out.flush();
 

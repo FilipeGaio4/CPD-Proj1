@@ -12,17 +12,20 @@ public class ChatClient {
     private static final int SERVER_PORT = 12345;
     private static final String TRUSTSTORE_FILE = "TCPServer/client/client.truststore";  // Truststore file containing server's public certificate
     private static final String TRUSTSTORE_PASSWORD = "123456";
+    private static PrintWriter out;
+    private static Scanner scanner;
     private enum ClientState {
         UNDEFINED,
         AUTHENTICATION,
         LOBBY,
         ROOM
     }
-    private static ClientState clientState = ClientState.UNDEFINED;
+    private static ClientState client_state = ClientState.UNDEFINED;
     private static final Map<String, String> serverMessages = new HashMap<>();
     static {
         serverMessages.put(":no_rooms", "(No rooms available)");
         serverMessages.put(":menu", "\n--- MENU ---\n1 - Join a room\n2 - Create a new room\n3 - Quit\nChoice: ");
+        serverMessages.put(":goodbye", "\nGoodbye!\nPress Enter to exit.");
     }
 
     public static void main(String[] args) throws IOException {
@@ -34,15 +37,14 @@ public class ChatClient {
         try (SSLSocket socket = (SSLSocket) factory.createSocket(SERVER_HOST, SERVER_PORT);) {
             System.out.println("Connected to the chat server.");
             new Thread(new ReadHandler(socket)).start();
-            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-            Scanner scanner = new Scanner(System.in);
+
+            // Initialize input and output streams
+            out = new PrintWriter(socket.getOutputStream(), true);
+            scanner = new Scanner(System.in);
             
             // Authentication
-            clientState = ClientState.AUTHENTICATION;
-            System.out.println("Enter Username:");
-            out.println(scanner.nextLine());
-            System.out.println("Enter Password:");
-            out.println(scanner.nextLine());
+            client_state = ClientState.AUTHENTICATION;
+            login();
 
             // Chat loop
             String message;
@@ -64,6 +66,27 @@ public class ChatClient {
         }
     }
 
+    private static void login() throws IOException {
+        System.out.println("Choose login method:");
+        System.out.println("1 - Login with username and password");
+        System.out.println("2 - Login with token");
+        String choice = scanner.nextLine();
+        out.println(choice);
+        client_state = ClientState.LOBBY; // Set state to lobby by default, if room server will send
+        if (choice.equals("1")) {
+            System.out.println("Enter Username:");
+            out.println(scanner.nextLine());
+            System.out.println("Enter Password:");
+            out.println(scanner.nextLine());
+        } else if (choice.equals("2")) {
+            System.out.println("Enter your token:");
+            out.println(scanner.nextLine());
+        } else {
+            System.out.println("Invalid option. Disconnecting.");
+            throw new IOException("Invalid option");
+        }
+    }
+
     private static class ReadHandler implements Runnable {
         private Socket socket;
 
@@ -78,6 +101,26 @@ public class ChatClient {
                 while ((message = in.readLine()) != null) {
                     if (serverMessages.containsKey(message.trim())) {
                         System.out.println(serverMessages.get(message.trim()));
+                    } 
+                    else if (message.startsWith(":change_state")) {
+                        String[] parts = message.split(" ");
+                        if (parts.length > 1) {
+                            String state = parts[1];
+                            switch (state) {
+                                case "AUTHENTICATION":
+                                    client_state = ClientState.AUTHENTICATION;
+                                    break;
+                                case "LOBBY":
+                                    client_state = ClientState.LOBBY;
+                                    break;
+                                case "ROOM":
+                                    client_state = ClientState.ROOM;
+                                    break;
+                                default:
+                                    System.out.println("Unknown state: " + state);
+                            }
+                        }
+                        System.out.println("Server command: " + message);
                     } else {
                         System.out.println(message);
                     }

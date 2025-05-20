@@ -49,11 +49,11 @@ public class LobbyServer {
         return uuid;
     }
 
-    public static String consumeToken(String token) {
+    public static Token consumeToken(String token) {
         for (Token t : tokenManager.getTokens()) {
             if (t.getUuid().equals(token)) {
-                tokenManager.removeToken(t);
-                return t.getUsername();
+                // tokenManager.removeToken(t); // TODO : nao precisamos de remover o token mas ver se queremos refrescar
+                return t;
             }
         }
         return null;
@@ -66,6 +66,15 @@ public class LobbyServer {
                 return;
             }
         }
+    }
+
+    public static String getFullToken(String uuid){
+        for (Token t : tokenManager.getTokens()) {
+            if (t.getUuid().equals(uuid)) {
+                return t.toString();
+            }
+        }
+        return null;
     }
 
     public static void addActiveUser(String username) {
