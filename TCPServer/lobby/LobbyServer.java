@@ -4,15 +4,18 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.ArrayList;
 
 import TCPServer.models.Room;
+import TCPServer.models.Token;
 
 public class LobbyServer {
     public static final int PORT = 12345;
     public static final Map<String, Room> rooms = new HashMap<>();
-    private static final Map<String, String> activeTokens = new HashMap<>();
+    private static final TokenManager tokenManager = new TokenManager();
 
     public static void main(String[] args) {
         AuthManager.loadUsers();
@@ -31,13 +34,28 @@ public class LobbyServer {
     }
 
     public static String generateToken(String username) {
-        String token = UUID.randomUUID().toString();
-        activeTokens.put(token, username);
-        return token;
+        String uuid = UUID.randomUUID().toString();
+        tokenManager.addToken(new Token(uuid, username, null));
+        return uuid;
     }
 
     public static String consumeToken(String token) {
-        return activeTokens.remove(token); // devolve username ou null
+        for (Token t : tokenManager.getTokens()) {
+            if (t.getUuid().equals(token)) {
+                tokenManager.removeToken(t);
+                return t.getUsername();
+            }
+        }
+        return null;
+    }
+
+    public static void updateTokenRoom(String token, String room) {
+        for (Token t : tokenManager.getTokens()) {
+            if (t.getUuid().equals(token)) {
+                t.setRoom(room);
+                return;
+            }
+        }
     }
 
     public static void printMessage(String message) {

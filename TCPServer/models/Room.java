@@ -31,7 +31,7 @@ public class Room {
 
     public synchronized void broadcast(String message) { // TODO : change here to our lock
         for (PrintWriter out : users.values()) {
-            out.println(message);
+            out.println(message); // TODO : Test if one user is slow if no one receives it
         }
     }
 
