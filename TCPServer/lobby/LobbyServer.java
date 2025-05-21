@@ -24,6 +24,8 @@ public class LobbyServer {
     private static final TokenManager tokenManager = new TokenManager();
     private static final String KEYSTORE_FILE = "TCPServer/lobby/server.keystore";
     private static final String KEYSTORE_PASSWORD = "123456";
+    private static Map<String, List<String>> chatMessages = new HashMap<>();
+
 
     public static void main(String[] args) {
         AuthManager.loadUsers();
@@ -92,4 +94,27 @@ public class LobbyServer {
     public static void printMessage(String message) {
         System.out.println(message);
     }
+
+    public static void addChatRoom(String roomName) {
+        chatMessages.put(roomName, new ArrayList<>());
+        System.out.println("Number of rooms : "+chatMessages.size());
+
+    }
+
+    public static void addPrompt(String roomName,String prompt) {
+        chatMessages.get(roomName).add(prompt);
+        System.out.println("Number of messages in this room: " + chatMessages.get(roomName).size());
+    }
+
+    public static String getMessages(String roomName) {
+            for (Map.Entry<String, List<String>> entry : chatMessages.entrySet()) {
+                if (entry.getKey().equals(roomName)) {
+                    // Join all messages with newlines or another delimiter
+                    System.out.println(String.join(",\n", entry.getValue()));
+                    return String.join(",\n", entry.getValue());
+                }
+            }
+            return ""; // or null, or throw exception if not found
+    }
+
 }
