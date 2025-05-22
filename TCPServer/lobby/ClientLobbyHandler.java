@@ -14,6 +14,13 @@ public class ClientLobbyHandler implements Runnable {
     private BufferedReader in;
     private Room currentRoom;
     private String token_uuid;
+        private enum ClientState {
+        UNDEFINED,
+        AUTHENTICATION,
+        LOBBY,
+        ROOM
+    }
+    private ClientState client_state = ClientState.UNDEFINED;
 
     public ClientLobbyHandler(Socket socket) {
         this.socket = socket;
@@ -24,6 +31,10 @@ public class ClientLobbyHandler implements Runnable {
         try {
             setupIO();
             login();
+            if (client_state == ClientState.ROOM){
+                out.println(":resume");
+                chatLoop();
+            }
             while (true) {
                 menu();
                 String choice = in.readLine();
@@ -71,17 +82,23 @@ public class ClientLobbyHandler implements Runnable {
                 throw new IOException("Auth failed");
             }
         }
-        else if (choice.equals("2")) {
+        else if (choice.equals("2")) {          // Token Login
             String token_uuid = in.readLine();
             System.out.println("Token: " + token_uuid);
-            Token token = LobbyServer.consumeToken(token_uuid);
+            Token token = LobbyServer.consumeToken(token_uuid, out);
             username = token.getUsername();
             if (username == null) {
                 out.println("Invalid token. Disconnecting.");
                 throw new IOException("Invalid token");
             }
-            String room = token.getRoom() != null ? "ROOM" : "LOBBY";
-            change_state(room);
+            ClientState state = token.getRoom() != null ? ClientState.ROOM : ClientState.LOBBY;
+            Room room = LobbyServer.rooms.get(token.getRoom()); // Double checking beacuse im already checking in consume token
+            if (room == null) {
+                out.println(":deleted_room");
+            }
+            // Puts the user in the room even if its null
+            currentRoom = room;
+            change_state(state);
         }
         else {
             out.println("Invalid option. Disconnecting.");
@@ -103,9 +120,10 @@ public class ClientLobbyHandler implements Runnable {
         LobbyServer.addActiveUser(username);
     }
 
-    private void change_state(String state) throws IOException {
+    private void change_state(ClientState state) throws IOException {
         out.println(":change_state " + state);
         out.flush();
+        client_state = state;
     }
 
     private void menu() throws IOException {
@@ -143,7 +161,7 @@ public class ClientLobbyHandler implements Runnable {
         room.addUser(username, out);
         // atualiza o token com a sala
         LobbyServer.updateTokenRoom(token_uuid, roomName);
-        out.println("Updated token: " + LobbyServer.getFullToken(token_uuid));
+        // out.println("Updated token: " + LobbyServer.getFullToken(token_uuid));
         out.println("Joined room " + roomName);
         out.flush();
 

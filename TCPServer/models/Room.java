@@ -26,6 +26,16 @@ public class Room {
         }
     }
 
+    public boolean isUserInRoom(String username) {
+        lock.lock();
+        try {
+            return users.containsKey(username);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+
     public void removeUser(String username) { // TODO : change here to our lock
         lock.lock();
         try {

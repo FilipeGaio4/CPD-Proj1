@@ -27,6 +27,8 @@ public class ChatClient {
         serverMessages.put(":no_rooms", "(No rooms available)");
         serverMessages.put(":menu", "\n--- MENU ---\n1 - Join a room\n2 - Create a new room\n3 - Quit\nChoice: ");
         serverMessages.put(":goodbye", "\nGoodbye!\nPress Enter to exit.");
+        serverMessages.put(":resume", "\nResuming your session with token.");
+        serverMessages.put(":deleted_room", "\nThe room you were in no longer exists. Please create or join a new room.");
     }
 
     public static void main(String[] args) throws IOException {

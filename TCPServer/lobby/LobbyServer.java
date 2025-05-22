@@ -1,6 +1,7 @@
 package TCPServer.lobby;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -49,11 +50,22 @@ public class LobbyServer {
         return uuid;
     }
 
-    public static Token consumeToken(String token) {
+    public static Token consumeToken(String token, PrintWriter out) {
         for (Token t : tokenManager.getTokens()) {
             if (t.getUuid().equals(token)) {
+                System.out.println("Token consumed: " + t.toString());
+                for (Room r : rooms.values()){
+                    if (r.getName().equals(t.getRoom())) {
+                        if (!r.isUserInRoom(t.getUsername())) {
+                            r.addUser(t.getUsername(), out);
+                        }
+                        return t;
+                    }
+                }
+                Token newToken = new Token(t.getUuid(), t.getUsername(), null);
+                tokenManager.removeToken(t);
+                tokenManager.addToken(newToken);
                 // tokenManager.removeToken(t); // TODO : nao precisamos de remover o token mas ver se queremos refrescar
-                return t;
             }
         }
         return null;
