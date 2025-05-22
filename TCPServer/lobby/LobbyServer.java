@@ -65,6 +65,7 @@ public class LobbyServer {
                 Token newToken = new Token(t.getUuid(), t.getUsername(), null);
                 tokenManager.removeToken(t);
                 tokenManager.addToken(newToken);
+                return newToken;
                 // tokenManager.removeToken(t); // TODO : nao precisamos de remover o token mas ver se queremos refrescar
             }
         }
