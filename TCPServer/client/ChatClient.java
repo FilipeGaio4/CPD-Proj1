@@ -29,6 +29,7 @@ public class ChatClient {
         serverMessages.put(":goodbye", "\nGoodbye!\nPress Enter to exit.");
         serverMessages.put(":resume", "\nResuming your session with token.");
         serverMessages.put(":deleted_room", "\nThe room you were in no longer exists. Please create or join a new room.");
+        serverMessages.put(":room_help", "\nShortcuts:\n- ':q' to leave the room.\n- ':u' to list users.\n- ':m <username> <message>' to send a private message.\n- ':h' to see this help.\n- ':logout' to log out.");
     }
 
     public static void main(String[] args) throws IOException {
@@ -62,7 +63,12 @@ public class ChatClient {
                     out.println(":logout");
                     break;
                 }
-                out.println(message);
+                else if (message.equalsIgnoreCase(":h")) {
+                    System.out.println(serverMessages.get(":room_help"));
+                }
+                else {
+                    out.println(message);
+                }
             }
         } catch (IOException e) {
             System.out.println("Error: " + e.getMessage());
@@ -73,6 +79,7 @@ public class ChatClient {
         System.out.println("Choose login method:");
         System.out.println("1 - Login with username and password");
         System.out.println("2 - Login with token");
+        System.out.println("3 - Register new user");
         String choice = scanner.nextLine();
         out.println(choice);
         client_state = ClientState.LOBBY; // Set state to lobby by default, if room server will send
@@ -84,6 +91,12 @@ public class ChatClient {
             out.println(scanner.nextLine());
         } else if (choice.equals("2")) {
             System.out.println("Enter your token:");
+            out.println(scanner.nextLine());
+        } else if (choice.equals("3")) {
+            System.out.println("Enter New Username:");
+            username = scanner.nextLine();
+            out.println(username);
+            System.out.println("Enter New Password:");
             out.println(scanner.nextLine());
         } else {
             System.out.println("Invalid option. Disconnecting.");
