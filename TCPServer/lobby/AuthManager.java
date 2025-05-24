@@ -8,6 +8,8 @@ import java.util.Map;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.io.*;
+
 
 public class AuthManager {
     private static final String USER_FILE = "TCPServer/data/users.txt";
@@ -34,6 +36,23 @@ public class AuthManager {
         String hash = data[1];
         String inputHash = hashPassword(password, salt);
         return inputHash.equals(hash);
+    }
+
+    public static boolean register(String username, String password) {
+        if (credentials.containsKey(username)) return false;
+        String salt = generateSalt();
+        String hash = hashPassword(password, salt);
+        credentials.put(username, new String[]{salt, hash});
+        saveUser(username, salt, hash);
+        return true;
+    }
+
+    private static void saveUser(String username, String salt, String hash) {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(USER_FILE, true))) {
+            writer.println(username + ":" + salt + ":" + hash);
+        } catch (IOException e) {
+            System.out.println("Error saving user: " + e.getMessage());
+        }
     }
 
     public static String generateSalt() {
