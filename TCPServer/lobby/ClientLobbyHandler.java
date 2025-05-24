@@ -103,6 +103,9 @@ public class ClientLobbyHandler implements Runnable {
             if (username == null) {
                 sendMessage("Invalid token. Disconnecting.");
                 throw new IOException("Invalid token");
+            } else if (LobbyServer.active_users.contains(username)){ // Extra verification here
+                sendMessage("User already logged in. Disconnecting.");
+                throw new IOException("User already logged in");
             }
             LocalDateTime current_date = LocalDateTime.now();
             LocalDateTime token_date = token.getdate();
@@ -115,10 +118,10 @@ public class ClientLobbyHandler implements Runnable {
             }
             ClientState state = token.getRoom() != null ? ClientState.ROOM : ClientState.LOBBY;
             Room room = LobbyServer.rooms.get(token.getRoom()); // Double checking beacuse im already checking in consume token
-            if (room == null) {
-                sendMessage(":deleted_room");
-            }
             // Puts the user in the room even if its null
+            if (room == null) {
+                sendMessage(":no_room");
+            }
             currentRoom = room;
             change_state(state);
         } else if (choice.equals("3")) {          // Register
@@ -133,8 +136,7 @@ public class ClientLobbyHandler implements Runnable {
             sendMessage("Invalid option. Disconnecting.");
             throw new IOException("Invalid option");
         }
-
-        if (LobbyServer.active_users.contains(username)) {
+        if (LobbyServer.active_users.contains(username)) {      // Check if user is already logged in somewhere else
             sendMessage("User already logged in. Disconnecting.");
             throw new IOException("User already logged in somewhere");
         }
@@ -186,6 +188,8 @@ public class ClientLobbyHandler implements Runnable {
         room.addUser(username, out);
         // atualiza o token com a sala
         LobbyServer.updateTokenRoom(token_uuid, roomName);
+        // atualiza o estado do cliente
+        change_state(ClientState.ROOM);
         // out.println("Updated token: " + LobbyServer.getFullToken(token_uuid));
         sendMessage("Joined room " + roomName);
         sendMessage(":room_help");
@@ -235,6 +239,7 @@ public class ClientLobbyHandler implements Runnable {
                 currentRoom.removeUser(username);
                 currentRoom = null;
                 LobbyServer.updateTokenRoom(token_uuid, null);
+                change_state(ClientState.LOBBY);
                 return;
             } else if (msg.startsWith(":ai")) {
                 String[] parts = msg.split(" ", 2);
@@ -256,8 +261,6 @@ public class ClientLobbyHandler implements Runnable {
                 String extractedContent = extractContentValue(responseBody);
                 System.out.println("Extracted content: " + extractedContent);
                 System.out.println(responseBody);
-
-
 
                 sendMessage("\n[Bot] : " + extractedContent + "\n");
             } else if (msg.equalsIgnoreCase(":logout")) {

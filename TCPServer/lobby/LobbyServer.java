@@ -120,6 +120,7 @@ public class LobbyServer {
 
     public static void addPrompt(String roomName,String prompt) {
         chatMessages.get(roomName).add(prompt);
+        System.out.println("Number of messages in this room: " + chatMessages.get(roomName).size());
     }
 
     public static String getMessages(String roomName) {
