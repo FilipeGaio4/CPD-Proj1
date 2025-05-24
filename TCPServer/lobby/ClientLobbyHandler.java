@@ -218,17 +218,30 @@ public class ClientLobbyHandler implements Runnable {
             Room room = new Room(roomName);
             LobbyServer.rooms.put(roomName, room);
             LobbyServer.printMessage("Room " + roomName + " created by " + username);
-            LobbyServer.addChatRoom(roomName);
-            String userMessage = """
-                        {
-                          "role": "system",
-                          "content": "You are an helpful assistant in a chat room with the name: %s, if the name has no meaning ignore it otherwise be mindful of the title when answering questions"
-                        }
-                    """.formatted(roomName);
 
-            // Append this message to the room's chat history
-            LobbyServer.addPrompt(roomName, userMessage);
-            sendMessage("Room '" + roomName + "' created.");
+            while (true) {
+                sendMessage("Do you want an AI bot to be present in the chat? \nAnswer yes or not ");
+                String ai = in.readLine();
+                if (ai.trim().equals("yes")) {
+                    sendMessage("Please enter a system message to configure how the AI should behave in this chat (e.g., tone, expertise level, personality, goals):");
+                    String behaviour = in.readLine();
+                    LobbyServer.addChatRoom(roomName);
+                    String userMessage = "You are a chat bot assistant that should always have the following behaviour when answering questions: %s"
+                            .formatted(behaviour);
+                    String prompt = buildOllamaMessage("system",userMessage);
+
+                    // Append this message to the room's chat history
+                    LobbyServer.addPrompt(roomName, prompt);
+                    sendMessage("Room '" + roomName + "' created.");
+                    return;
+                }
+                else if (ai.trim().equals("no")) {
+                    return;
+                }else{
+                    sendMessage("Invalid input. Please write either yes or no.");
+                }
+            }
+
         }
     }
 
@@ -242,6 +255,10 @@ public class ClientLobbyHandler implements Runnable {
                 change_state(ClientState.LOBBY);
                 return;
             } else if (msg.startsWith(":ai")) {
+                if(LobbyServer.checkRoomBot(currentRoom.getName())==null){
+                    sendMessage("This is room has no AI assistant");
+                    continue;
+                }
                 String[] parts = msg.split(" ", 2);
                 if (parts.length < 2) {
                     sendMessage("Usage: :ai <message>");
@@ -292,9 +309,7 @@ public class ClientLobbyHandler implements Runnable {
                 System.out.println("BROADCAST: " + msg);
                 currentRoom.broadcast("[" + username + "]: " + msg);
                 msg = "User talking to the other users: " + username + ", " + msg;
-                msg = """  
-                        { "role": "user", "content":""" + "\"" + msg + "\"" + """
-                        }""";
+                msg = buildOllamaMessage("user",msg);
                 LobbyServer.addPrompt(currentRoom.getName(), msg);
             }
         }

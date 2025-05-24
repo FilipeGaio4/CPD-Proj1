@@ -71,20 +71,13 @@ public class LobbyServer {
                 tokenManager.removeToken(t);
                 tokenManager.addToken(newToken);
                 return newToken;
-                // tokenManager.removeToken(t); // TODO : nao precisamos de remover o token mas ver se queremos refrescar
             }
         }
         return null;
     }
 
     public static void updateTokenRoom(String token, String room) {
-        for (Token t : tokenManager.getTokens()) {
-            if (t.getUuid().equals(token)) {
-                t.setRoom(room);
-                t.setDate(LocalDateTime.now().plusMinutes(20));
-                return;
-            }
-        }
+        tokenManager.updateTokenRoom(token, room);
     }
 
     public static String getFullToken(String uuid){
@@ -120,6 +113,10 @@ public class LobbyServer {
 
     public static void addPrompt(String roomName,String prompt) {
         chatMessages.get(roomName).add(prompt);
+    }
+
+    public static List<String> checkRoomBot(String roomName) {
+        return chatMessages.get(roomName);
     }
 
     public static String getMessages(String roomName) {
