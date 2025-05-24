@@ -28,7 +28,7 @@ public class ChatClient {
         serverMessages.put(":menu", "\n--- MENU ---\n1 - Join a room\n2 - Create a new room\n3 - Quit\nChoice: ");
         serverMessages.put(":goodbye", "\nGoodbye!\nPress Enter to exit.");
         serverMessages.put(":resume", "\nResuming your session with token.");
-        serverMessages.put(":deleted_room", "\nThe room you were in no longer exists. Please create or join a new room.");
+        serverMessages.put(":no_room", "\nYou've been connected to lobby (or you previous room was deleted or you were in the lobby). Please create or join a new room.");
         serverMessages.put(":room_help", "\nShortcuts:\n- ':q' to leave the room.\n- ':u' to list users.\n- ':m <username> <message>' to send a private message.\n- ':h' to see this help.\n- ':logout' to log out.\n- ':ai' <message> to send a message to our AI model.");
     }
 
@@ -141,7 +141,7 @@ public class ChatClient {
                                     System.out.println("Unknown state: " + state);
                             }
                         }
-                        System.out.println("Server command: " + message);
+                        // System.out.println("Server command: " + message);
                     } else {
                         System.out.println(message);
                     }

@@ -75,12 +75,7 @@ public class LobbyServer {
     }
 
     public static void updateTokenRoom(String token, String room) {
-        for (Token t : tokenManager.getTokens()) {
-            if (t.getUuid().equals(token)) {
-                t.setRoom(room);
-                return;
-            }
-        }
+        tokenManager.updateTokenRoom(token, room);
     }
 
     public static String getFullToken(String uuid){
