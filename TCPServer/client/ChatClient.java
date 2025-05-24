@@ -29,7 +29,7 @@ public class ChatClient {
         serverMessages.put(":goodbye", "\nGoodbye!\nPress Enter to exit.");
         serverMessages.put(":resume", "\nResuming your session with token.");
         serverMessages.put(":deleted_room", "\nThe room you were in no longer exists. Please create or join a new room.");
-        serverMessages.put(":room_help", "\nShortcuts:\n- ':q' to leave the room.\n- ':u' to list users.\n- ':m <username> <message>' to send a private message.\n- ':h' to see this help.\n- ':logout' to log out.");
+        serverMessages.put(":room_help", "\nShortcuts:\n- ':q' to leave the room.\n- ':u' to list users.\n- ':m <username> <message>' to send a private message.\n- ':h' to see this help.\n- ':logout' to log out.\n- ':ai' <message> to send a message to our AI model.");
     }
 
     public static void main(String[] args) throws IOException {
