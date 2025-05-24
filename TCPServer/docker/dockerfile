@@ -1,0 +1,5 @@
+# Use Ollama base image
+FROM ollama/ollama:latest
+
+# Download llama3 model during build
+RUN ollama pull llama3
