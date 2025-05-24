@@ -1,7 +1,7 @@
 package TCPServer.lobby;
 
 import TCPServer.models.*;
-import TCPServer.lobby.LobbyServer; 
+import TCPServer.lobby.LobbyServer;
 import TCPServer.lobby.AuthManager;
 
 import java.io.*;
@@ -10,6 +10,9 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.LocalDateTime;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 public class ClientLobbyHandler implements Runnable {
@@ -20,12 +23,14 @@ public class ClientLobbyHandler implements Runnable {
     private Room currentRoom;
     private String token_uuid;
     private HttpClient client;
+
     private enum ClientState {
         UNDEFINED,
         AUTHENTICATION,
         LOBBY,
         ROOM
     }
+
     private ClientState client_state = ClientState.UNDEFINED;
 
     public ClientLobbyHandler(Socket socket) {
@@ -38,7 +43,7 @@ public class ClientLobbyHandler implements Runnable {
         try {
             setupIO();
             login();
-            if (client_state == ClientState.ROOM){
+            if (client_state == ClientState.ROOM) {
                 sendMessage(":resume");
                 sendMessage("You are currently in room " + currentRoom.getName() + ".");
                 sendMessage(":room_help");
@@ -81,7 +86,7 @@ public class ClientLobbyHandler implements Runnable {
 
     private void login() throws IOException { // TODO : allow register but becareful with names. .matches("[A-Za-z0-9_]+") and not you
         String choice = in.readLine();
-        if (choice.equals("1")){
+        if (choice.equals("1")) {
             username = in.readLine();
             System.out.println("Logging in user: " + username);
             String pwd = in.readLine();
@@ -90,8 +95,7 @@ public class ClientLobbyHandler implements Runnable {
                 sendMessage("Authentication failed. Disconnecting.");
                 throw new IOException("Auth failed");
             }
-        }
-        else if (choice.equals("2")) {          // Token Login
+        } else if (choice.equals("2")) {          // Token Login
             token_uuid = in.readLine();
             System.out.println("Token: " + token_uuid);
             Token token = LobbyServer.consumeToken(token_uuid, out);
@@ -99,6 +103,15 @@ public class ClientLobbyHandler implements Runnable {
             if (username == null) {
                 sendMessage("Invalid token. Disconnecting.");
                 throw new IOException("Invalid token");
+            }
+            LocalDateTime current_date = LocalDateTime.now();
+            LocalDateTime token_date = token.getdate();
+            System.out.println("Current date: " + current_date);
+            System.out.println("Current date: " + token_date);
+            if (!current_date.isBefore(token_date)) {
+                sendMessage("Your token has expired.");
+                throw new IOException("Invalid token");
+
             }
             ClientState state = token.getRoom() != null ? ClientState.ROOM : ClientState.LOBBY;
             Room room = LobbyServer.rooms.get(token.getRoom()); // Double checking beacuse im already checking in consume token
@@ -108,8 +121,7 @@ public class ClientLobbyHandler implements Runnable {
             // Puts the user in the room even if its null
             currentRoom = room;
             change_state(state);
-        }
-        else if (choice.equals("3")) {          // Register
+        } else if (choice.equals("3")) {          // Register
             username = in.readLine();
             System.out.println("Registering user: " + username);
             String pwd = in.readLine();
@@ -117,8 +129,7 @@ public class ClientLobbyHandler implements Runnable {
                 sendMessage("Registration failed. Disconnecting.");
                 throw new IOException("Reg failed");
             }
-        }
-        else {
+        } else {
             sendMessage("Invalid option. Disconnecting.");
             throw new IOException("Invalid option");
         }
@@ -132,8 +143,7 @@ public class ClientLobbyHandler implements Runnable {
         if (choice.equals("1") || choice.equals("3")) {
             token_uuid = LobbyServer.generateToken(username);
             sendMessage("Your token: " + token_uuid);
-        }
-        else {
+        } else {
             sendMessage("If needed again, your token: " + token_uuid);
         }
         LobbyServer.addActiveUser(username);
@@ -155,7 +165,7 @@ public class ClientLobbyHandler implements Runnable {
         synchronized (LobbyServer.rooms) { // TODO : change here to our lock
             if (LobbyServer.rooms.keySet().size() == 0) {
                 sendMessage(":no_rooms");
-            }else {
+            } else {
                 String rooms_list = "";
                 for (var i : LobbyServer.rooms.keySet()) {
                     rooms_list += "\n  -" + i;
@@ -192,7 +202,8 @@ public class ClientLobbyHandler implements Runnable {
             if (LobbyServer.rooms.containsKey(roomName)) {
                 sendMessage("Room already exists.");
                 return;
-            }if(roomName.equals("")){
+            }
+            if (roomName.equals("")) {
                 sendMessage("Insert a name please.");
                 return;
             }
@@ -204,6 +215,15 @@ public class ClientLobbyHandler implements Runnable {
             LobbyServer.rooms.put(roomName, room);
             LobbyServer.printMessage("Room " + roomName + " created by " + username);
             LobbyServer.addChatRoom(roomName);
+            String userMessage = """
+                        {
+                          "role": "system",
+                          "content": "You are an helpful assistant in a chat room with the name: %s, if the name has no meaning ignore it otherwise be mindful of the title when answering questions"
+                        }
+                    """.formatted(roomName);
+
+            // Append this message to the room's chat history
+            LobbyServer.addPrompt(roomName, userMessage);
             sendMessage("Room '" + roomName + "' created.");
         }
     }
@@ -214,8 +234,9 @@ public class ClientLobbyHandler implements Runnable {
             if (msg.equalsIgnoreCase(":q")) {
                 currentRoom.removeUser(username);
                 currentRoom = null;
+                LobbyServer.updateTokenRoom(token_uuid, null);
                 return;
-            }else if (msg.startsWith(":ai")) {
+            } else if (msg.startsWith(":ai")) {
                 String[] parts = msg.split(" ", 2);
                 if (parts.length < 2) {
                     sendMessage("Usage: :ai <message>");
@@ -224,73 +245,29 @@ public class ClientLobbyHandler implements Runnable {
                 currentRoom.broadcast("[" + username + "]: " + msg);
                 String promptContent = "User asking the question to the ai: " + username + ", Message: " + parts[1];
 
-                String userMessage = """
-                            {
-                              "role": "user",
-                              "content": "%s"
-                            }
-                        """.formatted(promptContent);
-
+                String userMessage = buildOllamaMessage("user",promptContent);
                 // Append this message to the room's chat history
                 LobbyServer.addPrompt(currentRoom.getName(), userMessage);
 
-                String allMessages = LobbyServer.getMessages(currentRoom.getName());
+                String jsonPayload = buildOllamaPayload(currentRoom.getName());
 
-                // Final JSON payload for Ollama
-                String json = """
-                            {
-                              "model": "llama3",
-                              "messages": [%s],
-                              "stream": false,
-                              "format": "json"
-                            }
-                        """.formatted(allMessages);
+                String responseBody = sendOllamaRequest(jsonPayload);
 
-                HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create("http://localhost:11434/api/chat"))
-                        .header("Content-Type", "application/json")
-                        .POST(HttpRequest.BodyPublishers.ofString(json))
-                        .build();
+                String extractedContent = extractContentValue(responseBody);
+                System.out.println("Extracted content: " + extractedContent);
+                System.out.println(responseBody);
 
-                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-                int startIndex = response.body().indexOf("\"content\":\"{");
-                startIndex += "\"content\":\"".length();
-                int braceCount = 0;
-                StringBuilder content = new StringBuilder();
 
-                for (int i = startIndex; i < response.body().length(); i++) {
-                    char c = response.body().charAt(i);
-                    content.append(c);
-
-                    if (c == '{') braceCount++;
-                    else if (c == '}') braceCount--;
-
-                    if (braceCount == 0) {
-                        break;
-                    }
-                }
-                System.out.println("Extracted content: " + content);
-                System.out.println(response.body());
-                //String answer = "{ \"role\": \"assistant\", \"content\": \"" + content + "\" }";
-                String answer = """
-                    {
-                      "role": "assistant",
-                      "content": "%s"
-                    }
-                """.formatted(content);
-                LobbyServer.addPrompt(currentRoom.getName(), answer);
-                sendMessage("Response from AI model:\n" + content);
-            } else if (msg.equalsIgnoreCase(":logout")){
+                sendMessage("\n[Bot] : " + extractedContent + "\n");
+            } else if (msg.equalsIgnoreCase(":logout")) {
                 cleanup();
-            }
-            else if (msg.equalsIgnoreCase(":u")) {
+            } else if (msg.equalsIgnoreCase(":u")) {
                 synchronized (currentRoom) { // TODO : change here to our lock
                     currentRoom.listUsers(out);
 
                 }
-            }
-            else if (msg.startsWith(":m ")) {
+            } else if (msg.startsWith(":m ")) {
                 String[] parts = msg.split(" ", 3);
                 if (parts.length < 3) {
                     sendMessage("Usage: :m <username> <message>");
@@ -299,8 +276,7 @@ public class ClientLobbyHandler implements Runnable {
                 String receiver = parts[1];
                 String privateMessage = parts[2];
                 currentRoom.broadcast("[" + username + "] (private): " + privateMessage, receiver);
-            }
-            else if (msg.equalsIgnoreCase(":h")) {  // This will never be used since client is not sending :h
+            } else if (msg.equalsIgnoreCase(":h")) {  // This will never be used since client is not sending :h
                 sendMessage("RULES and Shortcuts:");
                 sendMessage("- ':q' to leave the room.");
                 sendMessage("- ':u' to list users.");
@@ -322,7 +298,10 @@ public class ClientLobbyHandler implements Runnable {
     }
 
     private void cleanup() {
-        try { socket.close(); } catch (IOException ignored) {}
+        try {
+            socket.close();
+        } catch (IOException ignored) {
+        }
         LobbyServer.removeActiveUser(username);
         if (currentRoom != null) {
             currentRoom.removeUser(username);
@@ -333,4 +312,58 @@ public class ClientLobbyHandler implements Runnable {
         out.println(message);
         out.flush();
     }
+
+    private String buildOllamaMessage(String role,String promptContent) {
+        return """
+                    {
+                      "role": "%s",
+                      "content": "%s"
+                    }
+                """.formatted(role,promptContent);
+    }
+
+    private String buildOllamaPayload(String roomName) {
+        String allMessages = LobbyServer.getMessages(roomName);
+        return """
+                    {
+                      "model": "llama3",
+                      "messages": [%s],
+                      "stream": false
+                    }
+                """.formatted(allMessages);
+    }
+
+    private String sendOllamaRequest(String jsonPayload) throws IOException, InterruptedException {
+        System.out.println("PAYLOADDDDD");
+        System.out.println(jsonPayload);
+        System.out.println("PAYLOADDDDD");
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:11434/api/chat"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
+                .build();
+
+        HttpClient client = HttpClient.newHttpClient();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        return response.body();
+    }
+
+    private String extractContentValue(String responseBody) {
+        Pattern pattern = Pattern.compile("\"content\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
+        Matcher matcher = pattern.matcher(responseBody);
+
+        if (matcher.find()) {
+            String raw = matcher.group(1);
+            // Unescape basic sequences
+            String assistantMessage = buildOllamaMessage("assistant",raw);
+            LobbyServer.addPrompt(currentRoom.getName(), assistantMessage);
+            return raw.replace("\\n", "\n")
+                    .replace("\\t", "\t")
+                    .replace("\\\"", "\"")
+                    .replace("\\\\", "\\");
+        }
+
+        return "[content not found]";
+    }
+
 }

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -48,13 +49,15 @@ public class LobbyServer {
 
     public static String generateToken(String username) {
         String uuid = UUID.randomUUID().toString();
-        tokenManager.addToken(new Token(uuid, username, null));
+        LocalDateTime now = LocalDateTime.now();
+        tokenManager.addToken(new Token(uuid, username, null,now));
         return uuid;
     }
 
     public static Token consumeToken(String token, PrintWriter out) {
         for (Token t : tokenManager.getTokens()) {
             if (t.getUuid().equals(token)) {
+                if(t.getRoom() == null)return t;
                 System.out.println("Token consumed: " + t.toString());
                 for (Room r : rooms.values()){
                     if (r.getName().equals(t.getRoom())) {
@@ -64,7 +67,7 @@ public class LobbyServer {
                         return t;
                     }
                 }
-                Token newToken = new Token(t.getUuid(), t.getUsername(), null);
+                Token newToken = new Token(t.getUuid(), t.getUsername(), null,LocalDateTime.now().plusMinutes(20));
                 tokenManager.removeToken(t);
                 tokenManager.addToken(newToken);
                 return newToken;
@@ -78,6 +81,7 @@ public class LobbyServer {
         for (Token t : tokenManager.getTokens()) {
             if (t.getUuid().equals(token)) {
                 t.setRoom(room);
+                t.setDate(LocalDateTime.now().plusMinutes(20));
                 return;
             }
         }
@@ -116,7 +120,6 @@ public class LobbyServer {
 
     public static void addPrompt(String roomName,String prompt) {
         chatMessages.get(roomName).add(prompt);
-        System.out.println("Number of messages in this room: " + chatMessages.get(roomName).size());
     }
 
     public static String getMessages(String roomName) {

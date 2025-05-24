@@ -1,14 +1,18 @@
 package TCPServer.models;
 
+import java.time.LocalDateTime;
+
 public class Token {
     private String uuid;
     private String username;
     private String room = null;
+    private LocalDateTime date;
 
-    public Token(String uuid, String username, String room) {
+    public Token(String uuid, String username, String room, LocalDateTime date) {
         this.uuid = uuid;
         this.username = username;
         this.room = room;
+        this.date = LocalDateTime.now().plusMinutes(20);
     }
 
     public String getUuid() {
@@ -23,8 +27,14 @@ public class Token {
         return room;
     }
 
+    public LocalDateTime getdate() {return date;}
+
     public void setRoom(String room) {
         this.room = room;
+    }
+
+    public void setDate(LocalDateTime date) {
+        this.date = date;
     }
     @Override
     public String toString() {
@@ -32,6 +42,7 @@ public class Token {
                 "uuid='" + uuid + '\'' +
                 ", username='" + username + '\'' +
                 ", room='" + room + '\'' +
+                ", dateLimit=" + date +
                 '}';
     }
     @Override
@@ -43,6 +54,7 @@ public class Token {
 
         if (!uuid.equals(token.uuid)) return false;
         if (!username.equals(token.username)) return false;
+        if (!date.equals(token.date)) return false;
         return room != null ? room.equals(token.room) : token.room == null;
     }
 }
