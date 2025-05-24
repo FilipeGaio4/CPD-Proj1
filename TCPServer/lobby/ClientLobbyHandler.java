@@ -337,9 +337,7 @@ public class ClientLobbyHandler implements Runnable {
     }
 
     private String sendOllamaRequest(String jsonPayload) throws IOException, InterruptedException {
-        System.out.println("PAYLOADDDDD");
-        System.out.println(jsonPayload);
-        System.out.println("PAYLOADDDDD");
+
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:11434/api/chat"))
                 .header("Content-Type", "application/json")
