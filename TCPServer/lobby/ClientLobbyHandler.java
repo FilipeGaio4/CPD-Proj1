@@ -271,15 +271,24 @@ public class ClientLobbyHandler implements Runnable {
                 // Append this message to the room's chat history
                 LobbyServer.addPrompt(currentRoom.getName(), userMessage);
 
-                String jsonPayload = buildOllamaPayload(currentRoom.getName());
+                new Thread(() -> {
+                    String jsonPayload = buildOllamaPayload(currentRoom.getName());
+                    String responseBody = null; // blocking
+                    try {
+                        responseBody = sendOllamaRequest(jsonPayload);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                    String extractedContent = extractContentValue(responseBody);
 
-                String responseBody = sendOllamaRequest(jsonPayload);
+                    System.out.println("Extracted content: " + extractedContent);
+                    System.out.println(responseBody);
 
-                String extractedContent = extractContentValue(responseBody);
-                System.out.println("Extracted content: " + extractedContent);
-                System.out.println(responseBody);
-
-                sendMessage("\n[Bot] : " + extractedContent + "\n");
+                    // Respond in room
+                    currentRoom.broadcast("\n[Bot]: " + extractedContent + "\n");
+                }).start();
             } else if (msg.equalsIgnoreCase(":logout")) {
                 cleanup();
             } else if (msg.equalsIgnoreCase(":u")) {
