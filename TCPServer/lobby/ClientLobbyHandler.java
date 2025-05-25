@@ -161,7 +161,42 @@ public class ClientLobbyHandler implements Runnable {
         sendMessage(":menu");
     }
 
+    private void sendHistory(String roomName){
+        List input = LobbyServer.getMessages(roomName);
+        String outputAll = "";
+        if(!currentRoom.isAi()) {
+            for (var message : input) {
+                String msg = message.toString();
+                String output = msg.replaceAll("User talking to the other users: (\\w+), (.+),?", "[$1] $2");
 
+                outputAll += output + "\n";
+            }
+        }else{
+            for (var message : input) {
+                String msg = message.toString();
+                String output = msg.replaceAll("\\{\\s*\"role\"\\s*:\\s*\"(.*?)\",\\s*\"content\"\\s*:\\s*\"(.*?)\"\\s*\\}", "$1 $2");
+                String role = output.replaceAll("^\\s*(\\w+)\\s+(.+)", "$1");
+                String res = output.replaceAll("^\\s*(\\w+)\\s+(.+)", "$2");
+                System.out.println(role);
+                if(!role.trim().equals("system")) {
+                    if(role.trim().equals("user")) {
+                        res = res.replaceAll("User talking to the other users: (\\w+), (.+),?", "[$1] $2");
+                        res = res.replaceAll("^\\s*User asking the question to the ai: (\\w+), Message: (.+)", "[$1] ai: $2");
+                    }else if(role.trim().equals("assistant")){
+                        String bot = "[Bot] ";
+                        res = bot + res;
+                    }
+                    System.out.println(res); // [user] [filipe] asd
+                    outputAll += res;
+
+                }
+            }
+        }
+        if(outputAll.length() > 0) {
+            sendMessage("Chat History: \n");
+            sendMessage(outputAll);
+        }
+    }
     private boolean joinRoom() throws IOException {
         System.out.println("Rooms: " + LobbyServer.rooms.keySet());
         sendMessage("\n--- Available rooms ---");
@@ -195,39 +230,6 @@ public class ClientLobbyHandler implements Runnable {
         sendMessage("Joined room " + roomName);
         sendMessage(":room_help");
         LobbyServer.printMessage("User " + username + " joined room " + roomName);
-
-        List input = LobbyServer.getMessages(roomName);
-        String outputAll = "";
-        if(!currentRoom.isAi()) {
-            for (var message : input) {
-                String msg = message.toString();
-                String output = msg.replaceAll("User talking to the other users: (\\w+), (.+),?", "[$1] $2");
-
-                outputAll += output + "\n";
-            }
-        }else{
-            for (var message : input) {
-                String msg = message.toString();
-                String output = msg.replaceAll("\\{\\s*\"role\"\\s*:\\s*\"(.*?)\",\\s*\"content\"\\s*:\\s*\"(.*?)\"\\s*\\}", "$1 $2");
-                String role = output.replaceAll("^\\s*(\\w+)\\s+(.+)", "$1");
-                String res = output.replaceAll("^\\s*(\\w+)\\s+(.+)", "$2");
-                System.out.println(role);
-                if(!role.trim().equals("system")) {
-                    if(role.trim().equals("user")) {
-                        res = res.replaceAll("User talking to the other users: (\\w+), (.+),?", "[$1] $2");
-                        res = res.replaceAll("^\\s*User asking the question to the ai: (\\w+), Message: (.+)", "[$1] ai: $2");
-                    }
-                    System.out.println(res); // [user] [filipe] asd
-                    outputAll += res;
-
-                }
-            }
-        }
-        if(outputAll.length() > 0) {
-            sendMessage("Chat History: \n");
-            sendMessage(outputAll);
-        }
-
         return true;
     }
 
@@ -284,6 +286,7 @@ public class ClientLobbyHandler implements Runnable {
     }
 
     private void chatLoop() throws IOException, InterruptedException {
+        sendHistory(currentRoom.getName());
         String msg;
         while ((msg = in.readLine()) != null) {
             if (msg.equalsIgnoreCase(":q")) {
@@ -308,7 +311,7 @@ public class ClientLobbyHandler implements Runnable {
                 String userMessage = buildOllamaMessage("user",promptContent);
                 // Append this message to the room's chat history
                 LobbyServer.addPrompt(currentRoom.getName(), userMessage);
-
+                Room answerRoom = currentRoom;
                 new Thread(() -> {
                     String jsonPayload = buildOllamaPayload(currentRoom.getName());
                     String responseBody = null; // blocking
@@ -319,13 +322,13 @@ public class ClientLobbyHandler implements Runnable {
                     } catch (InterruptedException e) {
                         throw new RuntimeException(e);
                     }
-                    String extractedContent = extractContentValue(responseBody);
+                    String extractedContent = extractContentValue(responseBody,answerRoom.getName());
 
                     System.out.println("Extracted content: " + extractedContent);
                     System.out.println(responseBody);
 
                     // Respond in room
-                    currentRoom.broadcast("\n[Bot]: " + extractedContent + "\n");
+                    answerRoom.broadcast("\n[Bot]: " + extractedContent + "\n");
                 }).start();
             } else if (msg.equalsIgnoreCase(":logout")) {
                 cleanup();
@@ -426,7 +429,7 @@ public class ClientLobbyHandler implements Runnable {
         return response.body();
     }
 
-    private String extractContentValue(String responseBody) {
+    private String extractContentValue(String responseBody, String answerRoom) {
         Pattern pattern = Pattern.compile("\"content\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
         Matcher matcher = pattern.matcher(responseBody);
 
@@ -434,7 +437,7 @@ public class ClientLobbyHandler implements Runnable {
             String raw = matcher.group(1);
             // Unescape basic sequences
             String assistantMessage = buildOllamaMessage("assistant",raw);
-            LobbyServer.addPrompt(currentRoom.getName(), assistantMessage);
+            LobbyServer.addPrompt(answerRoom, assistantMessage);
             return raw.replace("\\n", "\n")
                     .replace("\\t", "\t")
                     .replace("\\\"", "\"")
