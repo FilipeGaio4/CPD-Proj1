@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.ArrayList;
+import java.util.concurrent.locks.ReentrantLock;
 
 import TCPServer.models.Room;
 import TCPServer.models.Token;
@@ -27,6 +28,8 @@ public class LobbyServer {
     private static final String KEYSTORE_FILE = "TCPServer/lobby/server.keystore";
     private static final String KEYSTORE_PASSWORD = "123456";
     private static Map<String, List<String>> chatMessages = new HashMap<>();
+    private static final ReentrantLock roomLock = new ReentrantLock();
+    private static final ReentrantLock usersLock = new ReentrantLock();
 
 
     public static void main(String[] args) {
@@ -57,6 +60,13 @@ public class LobbyServer {
     public static Token consumeToken(String token, PrintWriter out) {
         for (Token t : tokenManager.getTokens()) {
             if (t.getUuid().equals(token)) {
+                LocalDateTime current_date = LocalDateTime.now();
+                LocalDateTime token_date = t.getdate();
+                if (!current_date.isBefore(token_date)) {
+                    Token invalidToken = new Token(null, null, null, null);
+                    return invalidToken;
+
+                }
                 if(t.getRoom() == null)return t;
                 System.out.println("Token consumed: " + t.toString());
                 for (Room r : rooms.values()){
@@ -73,7 +83,8 @@ public class LobbyServer {
                 return newToken;
             }
         }
-        return null;
+        Token invalidToken = new Token(null, null, null, null);
+        return invalidToken;
     }
 
     public static void updateTokenRoom(String token, String room) {
@@ -89,26 +100,53 @@ public class LobbyServer {
         return null;
     }
 
-    public static void addActiveUser(String username) {
-    active_users.add(username);
+    public static boolean addActiveUser(String username) {
+        usersLock.lock();
+        try {
+            if (!active_users.contains(username)) {
+                active_users.add(username);
+                return true;
+            }
+        } finally {
+            usersLock.unlock();
+        }
+        return false;
     }
 
     public static void removeActiveUser(String username) {
-        active_users.remove(username);
+    usersLock.lock();
+        try {
+            if (active_users.contains(username)) {
+                active_users.remove(username);
+            }
+        } finally {
+            usersLock.unlock();
+        }
     }
 
     public static List<String> getActiveUsers() {
-        return new ArrayList<>(active_users); // devolve uma cópia
+        return new ArrayList<>(active_users);
     }
 
     public static void printMessage(String message) {
         System.out.println(message);
     }
 
-    public static void addChatRoom(String roomName) {
-        chatMessages.put(roomName, new ArrayList<>());
-        System.out.println("Number of rooms : "+chatMessages.size());
-
+    public static boolean createRoom(String roomName, Room room) {
+        roomLock.lock();
+        try {
+            if (!rooms.containsKey(roomName)) {
+                rooms.put(roomName, room);
+                chatMessages.put(roomName, new ArrayList<>());
+                System.out.println("Room added: " + roomName);
+                return true;
+            } else {
+                System.out.println("Room already exists: " + roomName);
+                return false;
+            }
+        } finally {
+            roomLock.unlock();
+        }
     }
 
     public static void addPrompt(String roomName,String prompt) {
@@ -121,13 +159,9 @@ public class LobbyServer {
             for (Map.Entry<String, List<String>> entry : chatMessages.entrySet()) {
                 if (entry.getKey().equals(roomName)) {
                     messages.addAll(entry.getValue());
-                    // Join all messages with newlines or another delimiter
-//                    messages.add(entry.getValue());
-//                    System.out.println(String.join(",\n", entry.getValue()));
-//                    return String.join(",\n", entry.getValue());
                 }
             }
-            return messages; // or null, or throw exception if not found
+            return messages;
     }
 
 }

@@ -32,6 +32,7 @@ public class TokenManager {
                 tokensLock.lock();
                 try {
                     t.setRoom(room);
+                    t.setDate(t.getLocalDate().plusMinutes(20));
                 } finally {
                     tokensLock.unlock();
                 }

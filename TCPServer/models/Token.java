@@ -27,6 +27,10 @@ public class Token {
         return room;
     }
 
+    public LocalDateTime getLocalDate() {
+        return LocalDateTime.now();
+    }
+
     public LocalDateTime getdate() {return date;}
 
     public void setRoom(String room) {

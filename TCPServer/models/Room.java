@@ -49,7 +49,7 @@ public class Room {
         }
     }
 
-    public void listUsers(PrintWriter out) { // TODO : change here to our lock
+    public void listUsers(PrintWriter out) { 
         lock.lock();
         try {
             for (var i : users.keySet()) {
@@ -61,21 +61,21 @@ public class Room {
         }
     }
 
-    public void broadcast(String message) { // TODO : change here to our lock
+    public void broadcast(String message) { 
         lock.lock();
         try {
             for (PrintWriter out : users.values()) {
-                out.println(message); // TODO : Test if one user is slow if no one receives it
+                out.println(message);
             }
         } finally {
             lock.unlock();
         }
     }
 
-    public void broadcast(String message, String receiver) { // TODO : change here to our lock
+    public void broadcast(String message, String receiver) { 
         PrintWriter out = users.get(receiver);
         if (out != null) {
-            out.println(message); // TODO : Test if one user is slow if no one receives it
+            out.println(message); 
         }
     }
 

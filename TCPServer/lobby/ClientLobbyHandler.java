@@ -85,7 +85,7 @@ public class ClientLobbyHandler implements Runnable {
         out = new PrintWriter(socket.getOutputStream(), true);
     }
 
-    private void login() throws IOException { // TODO : allow register but becareful with names. .matches("[A-Za-z0-9_]+") and not you
+    private void login() throws IOException { 
         String choice = in.readLine();
         if (choice.equals("1")) {
             username = in.readLine();
@@ -102,20 +102,11 @@ public class ClientLobbyHandler implements Runnable {
             Token token = LobbyServer.consumeToken(token_uuid, out);
             username = token.getUsername();
             if (username == null) {
-                sendMessage("Invalid token. Disconnecting.");
+                sendMessage("Invalid or expired token. Disconnecting.");
                 throw new IOException("Invalid token");
             } else if (LobbyServer.active_users.contains(username)){ // Extra verification here
                 sendMessage("User already logged in. Disconnecting.");
                 throw new IOException("User already logged in");
-            }
-            LocalDateTime current_date = LocalDateTime.now();
-            LocalDateTime token_date = token.getdate();
-            System.out.println("Current date: " + current_date);
-            System.out.println("Current date: " + token_date);
-            if (!current_date.isBefore(token_date)) {
-                sendMessage("Your token has expired.");
-                throw new IOException("Invalid token");
-
             }
             ClientState state = token.getRoom() != null ? ClientState.ROOM : ClientState.LOBBY;
             Room room = LobbyServer.rooms.get(token.getRoom()); // Double checking beacuse im already checking in consume token
@@ -127,6 +118,10 @@ public class ClientLobbyHandler implements Runnable {
             change_state(state);
         } else if (choice.equals("3")) {          // Register
             username = in.readLine();
+            if (username.isEmpty() || !username.matches("[A-Za-z0-9]+") || username.equalsIgnoreCase("you")) {
+                sendMessage("Invalid username. Only alphanumeric characters are allowed.");
+                throw new IOException("Invalid username");
+            }
             System.out.println("Registering user: " + username);
             String pwd = in.readLine();
             if (!AuthManager.register(username, pwd)) {
@@ -149,7 +144,10 @@ public class ClientLobbyHandler implements Runnable {
         } else {
             sendMessage("If needed again, your token: " + token_uuid);
         }
-        LobbyServer.addActiveUser(username);
+        if (!LobbyServer.addActiveUser(username)) {
+            sendMessage("User already logged in somewhere else.");
+            throw new IOException("User already logged in somewhere else");
+        }
     }
 
     private void change_state(ClientState state) throws IOException {
@@ -186,7 +184,7 @@ public class ClientLobbyHandler implements Runnable {
                         String bot = "[Bot] ";
                         res = bot + res;
                     }
-                    System.out.println(res); // [user] [filipe] asd
+                    System.out.println(res); 
                     outputAll += res;
 
                 }
@@ -200,16 +198,14 @@ public class ClientLobbyHandler implements Runnable {
     private boolean joinRoom() throws IOException {
         System.out.println("Rooms: " + LobbyServer.rooms.keySet());
         sendMessage("\n--- Available rooms ---");
-        synchronized (LobbyServer.rooms) { // TODO : change here to our lock
-            if (LobbyServer.rooms.keySet().size() == 0) {
-                sendMessage(":no_rooms");
-            } else {
-                String rooms_list = "";
-                for (var i : LobbyServer.rooms.keySet()) {
-                    rooms_list += "\n  -" + i;
-                }
-                sendMessage(rooms_list);
+        if (LobbyServer.rooms.keySet().size() == 0) {
+            sendMessage(":no_rooms");
+        } else {
+            String rooms_list = "";
+            for (var i : LobbyServer.rooms.keySet()) {
+                rooms_list += "\n  -" + i;
             }
+            sendMessage(rooms_list);
         }
         sendMessage("Enter a Room Name: ");
         String roomName = in.readLine();
@@ -226,7 +222,6 @@ public class ClientLobbyHandler implements Runnable {
         LobbyServer.updateTokenRoom(token_uuid, roomName);
         // atualiza o estado do cliente
         change_state(ClientState.ROOM);
-        // out.println("Updated token: " + LobbyServer.getFullToken(token_uuid));
         sendMessage("Joined room " + roomName);
         sendMessage(":room_help");
         LobbyServer.printMessage("User " + username + " joined room " + roomName);
@@ -237,52 +232,55 @@ public class ClientLobbyHandler implements Runnable {
         sendMessage("Enter a Room Name: ");
         String roomName = in.readLine();
         System.out.println("Room Name: " + roomName);
-        synchronized (LobbyServer.rooms) { // TODO : change here to our lock
-            if (LobbyServer.rooms.containsKey(roomName)) {
-                sendMessage("Room already exists.");
-                return;
-            }
-            if (roomName.equals("")) {
-                sendMessage("Insert a name please.");
-                return;
-            }
-            if (!roomName.matches("[A-Za-z0-9_]+")) {
-                sendMessage("Invalid room name. Only alphanumeric characters and underscores are allowed.");
-                return;
-            }
 
-
-            while (true) {
-                sendMessage("Do you want an AI bot to be present in the chat? \nAnswer yes or no ");
-                String ai = in.readLine();
-                if (ai.trim().equals("yes")) {
-                    Room room = new Room(roomName,true);
-                    LobbyServer.rooms.put(roomName, room);
-                    LobbyServer.printMessage("Room " + roomName + " created by " + username);
-                    sendMessage("Please enter a system message to configure how the AI should behave in this chat (e.g., tone, expertise level, personality, goals):");
-                    String behaviour = in.readLine();
-                    LobbyServer.addChatRoom(roomName);
-                    String userMessage = "You are a chat bot assistant that should always have the following behaviour when answering questions: %s"
-                            .formatted(behaviour);
-                    String prompt = buildOllamaMessage("system",userMessage);
-
-                    // Append this message to the room's chat history
-                    LobbyServer.addPrompt(roomName, prompt);
-                    sendMessage("Room '" + roomName + "' created.");
-                    return;
-                }
-                else if (ai.trim().equals("no")) {
-                    Room room = new Room(roomName,false);
-                    LobbyServer.rooms.put(roomName, room);
-                    LobbyServer.addChatRoom(roomName);
-                    LobbyServer.printMessage("Room " + roomName + " created by " + username);
-                    return;
-                }else{
-                    sendMessage("Invalid input. Please write either yes or no.");
-                }
-            }
-
+        if (LobbyServer.rooms.containsKey(roomName)) {
+            sendMessage("Room already exists.");
+            return;
         }
+        if (roomName.equals("")) {
+            sendMessage("Insert a name please.");
+            return;
+        }
+        if (!roomName.matches("[A-Za-z0-9_]+")) {
+            sendMessage("Invalid room name. Only alphanumeric characters and underscores are allowed.");
+            return;
+        }
+
+
+        while (true) {
+            sendMessage("Do you want an AI bot to be present in the chat? \nAnswer yes or no ");
+            String ai = in.readLine();
+            if (ai.trim().equals("yes")) {
+                Room room = new Room(roomName,true);
+                if (!LobbyServer.createRoom(roomName, room)){
+                    sendMessage("Room with that name has been created meanwhile.");
+                    return;
+                }
+                LobbyServer.printMessage("Room " + roomName + " created by " + username);
+                sendMessage("Please enter a system message to configure how the AI should behave in this chat (e.g., tone, expertise level, personality, goals):");
+                String behaviour = in.readLine();
+                String userMessage = "You are a chat bot assistant that should always have the following behaviour when answering questions: %s"
+                        .formatted(behaviour);
+                String prompt = buildOllamaMessage("system",userMessage);
+
+                // Append this message to the room's chat history
+                LobbyServer.addPrompt(roomName, prompt);
+                sendMessage("Room '" + roomName + "' created.");
+                return;
+            }
+            else if (ai.trim().equals("no")) {
+                Room room = new Room(roomName,false);
+                if (!LobbyServer.createRoom(roomName, room)){
+                    sendMessage("Room with that name has been created meanwhile.");
+                    return;
+                }
+                LobbyServer.printMessage("Room " + roomName + " created by " + username);
+                return;
+            }else{
+                sendMessage("Invalid input. Please write either yes or no.");
+            }
+        }
+
     }
 
     private void chatLoop() throws IOException, InterruptedException {
@@ -333,10 +331,7 @@ public class ClientLobbyHandler implements Runnable {
             } else if (msg.equalsIgnoreCase(":logout")) {
                 cleanup();
             } else if (msg.equalsIgnoreCase(":u")) {
-                synchronized (currentRoom) { // TODO : change here to our lock
-                    currentRoom.listUsers(out);
-
-                }
+                currentRoom.listUsers(out);
             } else if (msg.startsWith(":m ")) {
                 String[] parts = msg.split(" ", 3);
                 if (parts.length < 3) {

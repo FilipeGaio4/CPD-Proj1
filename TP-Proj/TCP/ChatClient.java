@@ -15,12 +15,11 @@ public class ChatClient {
 
             // Authentication
             out.println(scanner.nextLine());
-            // TODO: Já conseguimos ver as mensagens antes de nos autenticarmos. ele dá broadcast para todos e ocmo estamos no socket. Mas nao conseguimos enviar
             
             // Chat loop
             String message;
             while (true) {
-                if (socket.isClosed()) { // TODO: Isto funciona mas só quando ele manda uma mensagem é que ele volta a fazer o ceck. arranjar forma de melhorar
+                if (socket.isClosed()) {
                     System.out.println("This socket is closed.");
                     scanner.close();
                     return;
