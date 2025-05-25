@@ -117,9 +117,9 @@ public class ChatClient {
                 String message;
                 while ((message = in.readLine()) != null) {
                     if (message.startsWith("[" + username + "]")){
+                        message = "[You]" + message.substring(message.indexOf("]") + 1);
+                        System.out.println(message);
                         continue;
-                        //message = "[You]" + message.substring(message.indexOf("]") + 1);
-                        //System.out.println(message);
                     }
                     else if (serverMessages.containsKey(message.trim())) {
                         System.out.println(serverMessages.get(message.trim()));

@@ -116,15 +116,18 @@ public class LobbyServer {
     }
 
 
-    public static String getMessages(String roomName) {
+    public static List<String> getMessages(String roomName) {
+            List<String> messages = new ArrayList<>();
             for (Map.Entry<String, List<String>> entry : chatMessages.entrySet()) {
                 if (entry.getKey().equals(roomName)) {
+                    messages.addAll(entry.getValue());
                     // Join all messages with newlines or another delimiter
-                    System.out.println(String.join(",\n", entry.getValue()));
-                    return String.join(",\n", entry.getValue());
+//                    messages.add(entry.getValue());
+//                    System.out.println(String.join(",\n", entry.getValue()));
+//                    return String.join(",\n", entry.getValue());
                 }
             }
-            return ""; // or null, or throw exception if not found
+            return messages; // or null, or throw exception if not found
     }
 
 }

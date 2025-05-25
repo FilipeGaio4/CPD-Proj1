@@ -11,6 +11,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -193,8 +194,40 @@ public class ClientLobbyHandler implements Runnable {
         // out.println("Updated token: " + LobbyServer.getFullToken(token_uuid));
         sendMessage("Joined room " + roomName);
         sendMessage(":room_help");
-
         LobbyServer.printMessage("User " + username + " joined room " + roomName);
+
+        List input = LobbyServer.getMessages(roomName);
+        String outputAll = "";
+        if(!currentRoom.isAi()) {
+            for (var message : input) {
+                String msg = message.toString();
+                String output = msg.replaceAll("User talking to the other users: (\\w+), (.+),?", "[$1] $2");
+
+                outputAll += output + "\n";
+            }
+        }else{
+            for (var message : input) {
+                String msg = message.toString();
+                String output = msg.replaceAll("\\{\\s*\"role\"\\s*:\\s*\"(.*?)\",\\s*\"content\"\\s*:\\s*\"(.*?)\"\\s*\\}", "$1 $2");
+                String role = output.replaceAll("^\\s*(\\w+)\\s+(.+)", "$1");
+                String res = output.replaceAll("^\\s*(\\w+)\\s+(.+)", "$2");
+                System.out.println(role);
+                if(!role.trim().equals("system")) {
+                    if(role.trim().equals("user")) {
+                        res = res.replaceAll("User talking to the other users: (\\w+), (.+),?", "[$1] $2");
+                        res = res.replaceAll("^\\s*User asking the question to the ai: (\\w+), Message: (.+)", "[$1] ai: $2");
+                    }
+                    System.out.println(res); // [user] [filipe] asd
+                    outputAll += res;
+
+                }
+            }
+        }
+        if(outputAll.length() > 0) {
+            sendMessage("Chat History: \n");
+            sendMessage(outputAll);
+        }
+
         return true;
     }
 
@@ -218,7 +251,7 @@ public class ClientLobbyHandler implements Runnable {
 
 
             while (true) {
-                sendMessage("Do you want an AI bot to be present in the chat? \nAnswer yes or not ");
+                sendMessage("Do you want an AI bot to be present in the chat? \nAnswer yes or no ");
                 String ai = in.readLine();
                 if (ai.trim().equals("yes")) {
                     Room room = new Room(roomName,true);
@@ -239,6 +272,7 @@ public class ClientLobbyHandler implements Runnable {
                 else if (ai.trim().equals("no")) {
                     Room room = new Room(roomName,false);
                     LobbyServer.rooms.put(roomName, room);
+                    LobbyServer.addChatRoom(roomName);
                     LobbyServer.printMessage("Room " + roomName + " created by " + username);
                     return;
                 }else{
@@ -325,6 +359,9 @@ public class ClientLobbyHandler implements Runnable {
                     msg = "User talking to the other users: " + username + ", " + msg;
                     msg = buildOllamaMessage("user",msg);
                     LobbyServer.addPrompt(currentRoom.getName(), msg);
+                }else{
+                    msg = "User talking to the other users: " + username + ", " + msg;
+                    LobbyServer.addPrompt(currentRoom.getName(), msg);
                 }
             }
         }
@@ -356,7 +393,17 @@ public class ClientLobbyHandler implements Runnable {
     }
 
     private String buildOllamaPayload(String roomName) {
-        String allMessages = LobbyServer.getMessages(roomName);
+        List<String> msgList = LobbyServer.getMessages(roomName);
+        String allMessages = "";
+        for (int i=0;i<msgList.size();i++) {
+
+            if(i==msgList.size()-1){
+                allMessages += msgList.get(i) + "\n";
+            }else{
+                allMessages += msgList.get(i) + ",\n";
+            }
+        }
+        System.out.println("All messages: " + allMessages);
         return """
                     {
                       "model": "llama3",
