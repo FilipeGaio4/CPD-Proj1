@@ -9,14 +9,16 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class Room {
     private final String name;
+    private final boolean ai;
     private final Map<String, PrintWriter> users = new HashMap<>(); // username -> output stream
     private static final ReentrantLock lock = new ReentrantLock();
 
-    public Room(String name) {
+    public Room(String name, boolean ai) {
         this.name = name;
+        this.ai = ai;
     }
 
-    public void addUser(String username, PrintWriter out) { // TODO : change here to our lock
+    public void addUser(String username, PrintWriter out) {
         lock.lock();
         try {
             users.put(username, out);
@@ -36,7 +38,7 @@ public class Room {
     }
 
 
-    public void removeUser(String username) { // TODO : change here to our lock
+    public void removeUser(String username) {
         lock.lock();
         try {
             users.remove(username);
@@ -79,6 +81,10 @@ public class Room {
 
     public String getName() {
         return name;
+    }
+
+    public boolean isAi() {
+        return ai;
     }
 
     public boolean hasUser(String username) {

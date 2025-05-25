@@ -115,9 +115,6 @@ public class LobbyServer {
         chatMessages.get(roomName).add(prompt);
     }
 
-    public static List<String> checkRoomBot(String roomName) {
-        return chatMessages.get(roomName);
-    }
 
     public static String getMessages(String roomName) {
             for (Map.Entry<String, List<String>> entry : chatMessages.entrySet()) {
